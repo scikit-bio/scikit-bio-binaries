@@ -35,7 +35,7 @@ print('// Do not edit by hand');
 print('');
 
 if method in ('direct','indirect',):
-    # we are generating unifrac_task_noclass.cpp
+    # we are generating skbio_alt_dyn.cpp
     print('#include "skbio_alt_dyn.hpp"');
 
 if method in ('indirect','api',):

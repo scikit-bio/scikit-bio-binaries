@@ -2,12 +2,13 @@
  * BSD 3-Clause License
  *
  * Copyright (c) 2016-2025, UniFrac development team.
+ * Copyright (c) 2025--, scikit-bio development team.
  * All rights reserved.
  *
  * See LICENSE file for more details
  */
 
-#include "unifrac_accapi.hpp"
+#include "skbb_accapi.hpp"
 #include <cstdlib>
 
 #if defined(OMPGPU)

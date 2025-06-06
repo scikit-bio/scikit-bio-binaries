@@ -2,6 +2,7 @@
  * BSD 3-Clause License
  *
  * Copyright (c) 2016-2025, UniFrac development team.
+ * Copyright (c) 2025--, scikit-bio development team.
  * All rights reserved.
  *
  * See LICENSE file for more details
@@ -10,14 +11,14 @@
 /*
  *
  * This file is used to create the necessary interfaces between
- *   unifrac_task.hpp and unifrac_task_impl.hpp
+ *   skbio_alt_impl.hpp
  * by means of
- *   generate_unifrac_task_noclass.py
+ *   generate_skbio_alt.py
  *
  */
 
 #include <stdint.h>
-#include "unifrac_accapi.hpp"
+#include "skbb_accapi.hpp"
 
 #ifndef SUCMP_NM
 /* create a default */
