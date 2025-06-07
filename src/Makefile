@@ -1,4 +1,33 @@
+.PHONY: all api api_acc install clean
 
+all:
+	$(MAKE) api
+	$(MAKE) install
+
+PLATFORM := $(shell uname -s)
+
+ifeq ($(PREFIX),)
+	PREFIX := $(CONDA_PREFIX)
+endif
+
+BLASLIB=-llapacke -lcblas
+
+ifeq ($(PLATFORM),Darwin)
+        SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/lib$(SSU).so
+        NOGPU := 1
+else
+        SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -shared
+        BLASLIB += -lgfortran -lquadmath
+endif
+
+CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
+NV_CXXFLAGS += -std=c++17 -I. $(OPT) -fPIC
+AMD_CXXFLAGS += -std=c++17 -I. $(OPT) -fPIC
+
+api: libskbb.so
+
+install:
+	#TBD
 
 #
 # skbio_alt dynamic code wrappers generation
@@ -76,4 +105,10 @@ skbio_alt_dyn_acc_amd.o: skbio_alt_dyn_acc_amd.cpp skbio_alt_dyn_acc_amd.h skbio
 	$(AMD_CXX) $(AMD_CXXFLAGS) -DSUCMP_NM=su_acc_amd -c $< -o $@
 
 ##
+
+SKBB_OBJS = skbio_alt.o skbb_accapi_cpu.o skbio_alt_dyn_cpu.o
+
+libskbb.so: $(SKBB_OBJS)
+	$(CXX) $(SO_LDDFLAGS) -o $@ $(SKBB_OBJS) $(BLASLIB)
+
 
