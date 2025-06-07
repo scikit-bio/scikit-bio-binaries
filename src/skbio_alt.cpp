@@ -996,10 +996,3 @@ void su::permanova(const float * mat, unsigned int n_dims,
                      fstat_out, pvalue_out);
 }
 
-// ======================= skbio_biom_subsampled  ================================
-
-
-su::skbio_biom_subsampled::skbio_biom_subsampled(const biom_inmem &parent, const bool w_replacement, const uint32_t n)
- : su::biom_subsampled(parent, w_replacement, n, uint32_t(myRandomGenerator()))
-{}
-
