@@ -25,21 +25,21 @@ void mat_to_centered(const double * mat, const uint32_t n_samples, float  * cent
 void find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, double * centered, double * &eigenvalues, double * &eigenvectors);
 void find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, float  * centered, float  * &eigenvalues, float  * &eigenvectors);
 
-// Perform Principal Coordinate Analysis
+// Perform Principal Coordinate Analysis using FSVD method
 // mat       - in, result of unifrac compute
 // n_samples - in, size of the matrix (n x n)
 // n_dims    - in, Dimensions to reduce the distance matrix to. This number determines how many eigenvectors and eigenvalues will be returned.
 // eigenvalues - out, alocated buffer of size n_dims
 // samples     - out, alocated buffer of size n_dims x n_samples
 // proportion_explained - out, allocated buffer of size n_dims
-void pcoa(const double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained);
-void pcoa(const float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
+void pcoa_fsvd(const double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained);
+void pcoa_fsvd(const float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
 // Tentatively deprecated
-void pcoa(const double * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
+void pcoa_fsvd(const double * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
 
 // in-place version, will use mat as temp buffer internally
-void pcoa_inplace(double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained);
-void pcoa_inplace(float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
+void pcoa_fsvd_inplace(double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained);
+void pcoa_fsvd_inplace(float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
 
 }
 

@@ -525,6 +525,8 @@ public:
     species is present in two sites, that means that the sites are
     similar.).
 
+    Implemented using FSVD method.
+
     Note that the returned eigenvectors are not normalized to unit length.
 */
 
@@ -600,28 +602,28 @@ inline void pcoa_T(TRealIn * mat, TCenter &center_obj, const uint32_t n_samples,
 // Main, external interfaces
 //
 
-void skbb::pcoa(const double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+void skbb::pcoa_fsvd(const double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
   skbb::NewCentered<double> cobj(n_samples, n_dims);
   pcoa_T(mat, cobj , n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa(const float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd(const float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::NewCentered<float> cobj(n_samples, n_dims);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
 // Note: tentatively deprecated
-void skbb::pcoa(const double * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd(const double * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::NewCentered<float> cobj(n_samples, n_dims);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_inplace(double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
   skbb::InPlaceCentered<double> cobj(mat);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_inplace(float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::InPlaceCentered<float> cobj(mat);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
