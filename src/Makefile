@@ -29,6 +29,13 @@ api: libskbb.so
 install:
 	#TBD
 
+util_rand.o: util/rand.cpp util/rand.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_coordinate_analysis.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+
 #
 # skbio_alt dynamic code wrappers generation
 #
@@ -106,7 +113,7 @@ skbio_alt_dyn_acc_amd.o: skbio_alt_dyn_acc_amd.cpp skbio_alt_dyn_acc_amd.h skbio
 
 ##
 
-SKBB_OBJS = skbio_alt.o skbb_accapi_cpu.o skbio_alt_dyn_cpu.o
+SKBB_OBJS = util_rand.o ord_pcoa.o skbio_alt.o skbb_accapi_cpu.o skbio_alt_dyn_cpu.o
 
 libskbb.so: $(SKBB_OBJS)
 	$(CXX) $(SO_LDDFLAGS) -o $@ $(SKBB_OBJS) $(BLASLIB)
