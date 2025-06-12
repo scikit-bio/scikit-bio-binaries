@@ -51,13 +51,15 @@
 // Compute PERMANOVA pseudo-F partial statistic using permutations
 // mat is symmetric matrix of size n_dims x n_dims
 // grouping is an array of size n_dims
-// group_sizes is an array of size maxel(grouping)
+// group_sizes is an array of size n_groups (i.e. maxel(grouping))
 //
 // Results in permutted_sWs, and array of size (n_perm+1)
 template<class TFloat>
-inline void permanova_perm_fp_sW_T(const TFloat * mat, const uint32_t n_dims,
+static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
+                                   const TFloat * mat,
                                    const uint32_t *grouping, 
-                                   const uint32_t *group_sizes, uint32_t n_groups,
+                                   uint32_t n_groups,
+                                   const uint32_t *group_sizes,
                                    const uint32_t n_perm,
                                    TFloat *permutted_sWs) {
 #if defined(SKBB_ENABLE_ACC_NV) || defined(SKBB_ENABLE_ACC_AMD)
@@ -137,24 +139,30 @@ inline void permanova_perm_fp_sW_T(const TFloat * mat, const uint32_t n_dims,
       if (false) {
 #if defined(UNIFRAC_ENABLE_ACC_NV)
       } else if (use_acc==skbb::ACC_NV) {
-        skbb_acc_nv::pmn_f_stat_sW<TFloat>(mat, n_dims,
-                                         permutted_groupings, max_p-tp,
+        skbb_acc_nv::pmn_f_stat_sW<TFloat>(n_dims,
+                                         mat,
+					 max_p-tp,
+                                         permutted_groupings,
                                          inv_group_sizes,
                                          permutted_sWs+tp);
 #endif
 #if defined(UNIFRAC_ENABLE_ACC_AMD)
       } else if (use_acc==skbb::ACC_AMD) {
-        skbb_acc_amd::pmn_f_stat_sW<TFloat>(mat, n_dims,
-                                          permutted_groupings, max_p-tp,
-                                          inv_group_sizes,
-                                          permutted_sWs+tp);
+        skbb_acc_amd::pmn_f_stat_sW<TFloat>(n_dims, mat,
+                                         mat,
+					 max_p-tp,
+                                         permutted_groupings,
+                                         inv_group_sizes,
+                                         permutted_sWs+tp);
 #endif
       } else {
         // as above, default to CPU
-        skbb_cpu::pmn_f_stat_sW<TFloat>(mat, n_dims,
-                                      permutted_groupings, max_p-tp,
-                                      inv_group_sizes,
-                                      permutted_sWs+tp);
+        skbb_cpu::pmn_f_stat_sW<TFloat>( n_dims,
+                                         mat,
+					 max_p-tp,
+                                         permutted_groupings,
+                                         inv_group_sizes,
+                                         permutted_sWs+tp);
       }
   }
 
@@ -179,7 +187,7 @@ inline void permanova_perm_fp_sW_T(const TFloat * mat, const uint32_t n_dims,
 
 // Compute the square sum of the upper triangle
 template<class TFloat>
-inline TFloat sum_upper_square(const TFloat * mat, const uint32_t n_dims) {
+static inline TFloat sum_upper_square(const uint32_t n_dims, const TFloat * mat) {
   // Use full precision for intermediate compute, to minimize accumulation errors
   double sum = 0.0;
   // not optimal parallelism, but this is cheap anyway
@@ -200,7 +208,8 @@ inline TFloat sum_upper_square(const TFloat * mat, const uint32_t n_dims) {
 //
 // Results in permutted_fstats, and array of size (n_perm+1)
 template<class TFloat>
-inline void permanova_all_T(const TFloat * mat, const uint32_t n_dims,
+static inline void permanova_all_T(const uint32_t n_dims,
+                            const TFloat * mat,
                             const uint32_t *grouping, 
                             const uint32_t n_perm,
                             TFloat *permutted_fstats) {
@@ -214,14 +223,14 @@ inline void permanova_all_T(const TFloat * mat, const uint32_t n_dims,
   {
     // Use the same buffer as the output
     TFloat *permutted_sWs = permutted_fstats;
-    permanova_perm_fp_sW_T<TFloat>(mat,n_dims,grouping,
-                                   group_sizes,n_groups,
+    permanova_perm_fp_sW_T<TFloat>(n_dims,mat,grouping,
+                                   n_groups,group_sizes,
                                    n_perm,
                                    permutted_sWs);
   }
 
   // get the normalization factor
-  TFloat s_T = sum_upper_square<TFloat>(mat,n_dims)/n_dims;
+  TFloat s_T = sum_upper_square<TFloat>(n_dims, mat)/n_dims;
  
   TFloat inv_ngroups_1 = TFloat(1.0)/ (n_groups - 1);
   TFloat inv_dg =   TFloat(1.0)/  (n_dims - n_groups);
@@ -241,13 +250,14 @@ inline void permanova_all_T(const TFloat * mat, const uint32_t n_dims,
 //
 // Results in permutted_fstats, and array of size (n_perm+1)
 template<class TFloat>
-inline void permanova_T(const TFloat * mat, const uint32_t n_dims,
+static inline void permanova_T(const uint32_t n_dims,
+                        const TFloat * mat,
                         const uint32_t *grouping, 
                         const uint32_t n_perm,
                         TFloat &fstat, TFloat &pvalue) {
   // First compute all the permutations
   TFloat *permutted_fstats = new TFloat[n_perm+1];
-  permanova_all_T<TFloat>(mat,n_dims,grouping,n_perm,permutted_fstats);
+  permanova_all_T<TFloat>(n_dims,mat,grouping,n_perm,permutted_fstats);
 
   // keep the first one and compute p_value, too
   TFloat myfstat = permutted_fstats[0];
@@ -265,19 +275,25 @@ inline void permanova_T(const TFloat * mat, const uint32_t n_dims,
   delete[] permutted_fstats;
 }
 
-void su::permanova(const double * mat, unsigned int n_dims,
+//
+// Instantiate concrete functions from tempates
+//
+
+void skbb::permanova(unsigned int n_dims,
+                   const double * mat,
                    const uint32_t *grouping,
                    unsigned int n_perm,
                    double &fstat_out, double &pvalue_out) {
-  permanova_T<double>(mat, n_dims, grouping, n_perm,
+  permanova_T<double>(n_dims, mat, grouping, n_perm,
                       fstat_out, pvalue_out);
 }
 
-void su::permanova(const float * mat, unsigned int n_dims,
+void skbb::permanova(unsigned int n_dims,
+                   const float * mat,
                    const uint32_t *grouping,
                    unsigned int n_perm,
                    float &fstat_out, float &pvalue_out) {
-  permanova_T<float>(mat, n_dims, grouping, n_perm,
+  permanova_T<float>(n_dims, mat, grouping, n_perm,
                      fstat_out, pvalue_out);
 }
 

@@ -55,8 +55,8 @@ static inline int pmn_get_max_parallelism_T() {
 // inv_group_sizes is an array of size maxel(grouping)
 template<class TFloat>
 static inline TFloat pmn_f_stat_sW_one(
-		const TFloat * mat,
 		const uint32_t n_dims,
+		const TFloat * mat,
 		const uint32_t *grouping,
 		const TFloat *inv_group_sizes) {
   // Use full precision for intermediate compute, to minimize accumulation errors
@@ -99,10 +99,10 @@ static inline TFloat pmn_f_stat_sW_one(
 // Note: Best results when n_grouping_dims fits in L1 cache
 template<class TFloat>
 static inline void pmn_f_stat_sW_T(
-		const TFloat * mat,
 		const uint32_t n_dims,
-		const uint32_t *groupings,
+		const TFloat * mat,
 		const uint32_t n_grouping_dims,
+		const uint32_t *groupings,
 		const TFloat *inv_group_sizes,
 		TFloat *group_sWs) {
 #if !(defined(_OPENACC) || defined(OMPGPU))
@@ -110,7 +110,7 @@ static inline void pmn_f_stat_sW_T(
 #pragma omp parallel for
  for (uint32_t grouping_el=0; grouping_el < n_grouping_dims; grouping_el++) {
     const uint32_t *grouping = groupings + uint64_t(grouping_el)*uint64_t(n_dims);
-    group_sWs[grouping_el] = pmn_f_stat_sW_one<TFloat>(mat,n_dims,grouping,inv_group_sizes);
+    group_sWs[grouping_el] = pmn_f_stat_sW_one<TFloat>(n_dims,mat,grouping,inv_group_sizes);
  } 
 #else
 // GPU version, just put all the code in here

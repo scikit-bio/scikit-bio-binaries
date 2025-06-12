@@ -35,10 +35,10 @@ namespace SKBB_ACC_NM {
 	// Note: Best results when n_grouping_dims fits in L1 cache
 	template<class TFloat>
 	void pmn_f_stat_sW(
-			const TFloat * mat,
 			const uint32_t n_dims,
-		        const uint32_t *groupings,
+			const TFloat * mat,
 			const uint32_t n_grouping_dims,
+		        const uint32_t *groupings,
 			const TFloat *inv_group_sizes,
 			TFloat *group_sWs);
 }

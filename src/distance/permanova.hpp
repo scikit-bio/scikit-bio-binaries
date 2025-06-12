@@ -17,11 +17,38 @@
 
 #include <stdint.h>
 
-namespace su {
+namespace skbb {
 
-// Compute Permanova
-void permanova(const double * mat, unsigned int n_dims, const uint32_t *grouping, unsigned int n_perm, double &fstat_out, double &pvalue_out);
-void permanova(const float  * mat, unsigned int n_dims, const uint32_t *grouping, unsigned int n_perm, float  &fstat_out, float  &pvalue_out);
+/*
+ *  Test for significant differences between groups using PERMANOVA.
+ *
+ *  Permutational Multivariate Analysis of Variance (PERMANOVA) is a
+ *  non-parametric method that tests whether two or more groups of objects
+ *  (e.g., samples) are significantly different based on a categorical factor.
+ *  It is conceptually similar to ANOVA except that it operates on a distance
+ *  matrix, which allows for multivariate analysis. PERMANOVA computes a
+ *  pseudo-F statistic.
+ *
+ *  Statistical significance is assessed via a permutation test. The assignment
+ *  of objects to groups (`grouping`) is randomly permuted a number of times
+ *  (controlled via `n_perm`). A pseudo-F statistic is computed for each
+ *  permutation and the p-value is the proportion of permuted pseudo-F
+ *  statisics that are equal to or greater than the original (unpermuted)
+ *  pseudo-F statistic.
+ *
+ *  Input parameters:
+ *   n_dims    - size of the matrix
+ *   mat       - distance matrix (n_dims x n_dims)
+ *   grouping  - grouping array of size n_dims 
+ *   n_perm    - number of permutations
+ *
+ *  Output parameters:
+ *   fstat_out  - pseudo-F statistics
+ *   pvalue_out - p-value
+ */
+
+void permanova(unsigned int n_dims, const double * mat, const uint32_t *grouping, unsigned int n_perm, double &fstat_out, double &pvalue_out);
+void permanova(unsigned int n_dims, const float  * mat, const uint32_t *grouping, unsigned int n_perm, float  &fstat_out, float  &pvalue_out);
 
 }
 
