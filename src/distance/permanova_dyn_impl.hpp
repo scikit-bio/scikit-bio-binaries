@@ -8,7 +8,17 @@
  * See LICENSE file for more details
  */
 
-#include "skbb_accapi.hpp"
+/*
+ *
+ * This file is used to create the necessary interfaces
+ * by means of
+ *   generate_permanova_dyn.py
+ *
+ * Anything ending in _T will get a acc-specific function wrapper.
+ *
+ */
+
+#include "distance/permanova_dyn.hpp"
 #include <cstdlib>
 #include <algorithm>
 

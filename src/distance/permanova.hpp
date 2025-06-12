@@ -1,9 +1,19 @@
 /*
- * Classes, methods and unction that provide skbio-like unctionality
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2016-2025, UniFrac development team.
+ * Copyright (c) 2025--, scikit-bio development team.
+ * All rights reserved.
+ *
+ * See LICENSE file for more details
  */
 
-#ifndef UNIFRAC_SKBIO_ALT_H
-#define UNIFRAC_SKBIO_ALT_H
+/*
+ * Classes, methods and functions for computing permanova
+ */
+
+#ifndef PERMANOVA_HPP
+#define PERMANOVA_HPP
 
 #include <stdint.h>
 

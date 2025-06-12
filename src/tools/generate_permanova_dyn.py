@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Parse skbio_alt_dyn_impl.hpp
+# Parse permanova_dyn_impl.hpp
 # and generate concrete implementations
 # for all inline functions ending in _T
 #
@@ -22,7 +22,7 @@ method =sys.argv[2]
 # ==========================
 #
 
-with open('skbio_alt_dyn_impl.hpp','r') as fd:
+with open('distance/permanova_dyn_impl.hpp','r') as fd:
     lines=fd.readlines()
 
 #
@@ -30,21 +30,21 @@ with open('skbio_alt_dyn_impl.hpp','r') as fd:
 #
 
 # print out the header
-print('// Generated from skbio_alt_dyn_impl.hpp (using method %s)'%method);
+print('// Generated from permanova_dyn_impl.hpp (using method %s)'%method);
 print('// Do not edit by hand');
 print('');
 
 if method in ('direct','indirect',):
-    # we are generating skbio_alt_dyn.cpp
-    print('#include "skbio_alt_dyn.hpp"');
+    # we are generating permanova_dyn.cpp
+    print('#include "distance/permanova_dyn.hpp"');
 
 if method in ('indirect','api',):
     # we referencing the api
-    print('#include "skbio_alt_dyn_%s.h"'%variant);
+    print('#include "permanova_dyn_%s.h"'%variant);
 
 if method in ('direct','api',):
     # we are generating the actual code
-    print('#include "skbio_alt_dyn_impl.hpp"');
+    print('#include "distance/permanova_dyn_impl.hpp"');
 
 nmspace = print_header(variant,method)
 print_body(method, lines, nmspace)

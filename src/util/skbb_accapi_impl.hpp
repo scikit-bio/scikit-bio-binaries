@@ -8,7 +8,19 @@
  * See LICENSE file for more details
  */
 
-#include "skbb_accapi.hpp"
+// Implementation specific acceleration primitives
+
+/*
+ *
+ * This file is used to create the necessary interfaces
+ * by means of
+ *   generate_skbb_accapi.py
+ *
+ * Anything ending in _T will get a acc-specific function wrapper.
+ *
+ */
+
+#include "util/skbb_accapi.hpp"
 #include <cstdlib>
 
 #if defined(OMPGPU)

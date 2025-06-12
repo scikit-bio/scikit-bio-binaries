@@ -22,7 +22,7 @@ method =sys.argv[2]
 # ==========================
 #
 
-with open('skbb_accapi_impl.hpp','r') as fd:
+with open('util/skbb_accapi_impl.hpp','r') as fd:
     lines=fd.readlines()
 
 #
@@ -36,7 +36,7 @@ print('');
 
 if method in ('direct','indirect',):
     # we are generating skbb_accapi.cpp
-    print('#include "skbb_accapi.hpp"');
+    print('#include "util/skbb_accapi.hpp"');
 
 if method in ('indirect','api',):
     # we referencing the dynamic api
@@ -44,7 +44,7 @@ if method in ('indirect','api',):
 
 if method in ('direct','api',):
     # we are generating the actual code
-    print('#include "skbb_accapi_impl.hpp"');
+    print('#include "util/skbb_accapi_impl.hpp"');
 
 nmspace = print_header(variant,method)
 print_body(method, lines, nmspace)

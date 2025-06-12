@@ -1,146 +1,44 @@
 /*
- * Classes, methods and unction that provide skbio-like unctionality
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2016-2025, UniFrac development team.
+ * Copyright (c) 2025--, scikit-bio development team.
+ * All rights reserved.
+ *
+ * See LICENSE file for more details
  */
 
-#include "skbio_alt.hpp"
+/*
+ * Classes, methods and functions for computing permanova 
+ */
+
+#include "distance/permanova.hpp"
+
+#define SKBB_ACC_NM  skbb_cpu
+#include "util/skbb_accapi.hpp"
+#include "distance/permanova_dyn.hpp"
+#undef SKBB_ACC_NM
+
+#ifdef SKBB_ENABLE_ACC_NV
+#define SKBB_ACC_NM  skbb_acc_nv
+#include "util/skbb_accapi.hpp"
+#include "distance/permanova_dyn.hpp"
+#undef SKBB_ACC_NM
+#endif
+
+#ifdef SKBB_ENABLE_ACC_AMD
+#define SKBB_ACC_NM  skbb_acc_amd
+#include "util/skbb_accapi.hpp"
+#include "distance/permanova_dyn.hpp"
+#undef SKBB_ACC_NM
+#endif
+
+
 #include "util/rand.hpp"
+#include "util/skbb_detect_acc.hpp"
 #include <stdlib.h> 
-#include <omp.h>
 
 #include <algorithm>
-
-// We will always have the CPU version
-#define SUCMP_NM  su_cpu
-#include "skbio_alt_dyn.hpp"
-#undef SUCMP_NM
-static constexpr int ACC_CPU=0;
-
-#ifdef UNIFRAC_ENABLE_ACC_NV
-#define SUCMP_NM  su_acc_nv
-#include "skbio_alt_dyn.hpp"
-#undef SUCMP_NM
-static constexpr int ACC_NV=1;
-#endif
-
-#ifdef UNIFRAC_ENABLE_ACC_AMD
-#define SUCMP_NM  su_acc_amd
-#include "skbio_alt_dyn.hpp"
-#undef SUCMP_NM
-static constexpr int ACC_AMD=2;
-#endif
-
-// test only once, then use persistent value
-static int skbio_use_acc = -1;
-
-inline void skbio_check_acc() {
- if (skbio_use_acc!=-1) return; // keep the cached version
-
- bool print_info = false;
-
- if (const char* env_p = std::getenv("UNIFRAC_GPU_INFO")) {
-   print_info = true;
-   std::string env_s(env_p);
-   if ((env_s=="NO") || (env_s=="N") || (env_s=="no") || (env_s=="n") ||
-       (env_s=="NEVER") || (env_s=="never")) {
-     print_info = false;
-   }
- }
-
- int detected_acc = ACC_CPU;
-#if defined(UNIFRAC_ENABLE_ACC_NV)
- bool detected_nv_acc = su_acc_nv::acc_found_gpu();
- if (print_info) {
-   if (detected_nv_acc) {
-     printf("INFO (skbio_alt): NVIDIA GPU detected\n");
-   } else {
-     printf("INFO (skbio_alt): NVIDIA GPU not detected\n");
-   }
- }
- if ((detected_acc==ACC_CPU) && detected_nv_acc) {
-   detected_acc = ACC_NV;
-   if (const char* env_p = std::getenv("UNIFRAC_SKBIO_USE_NVIDIA_GPU")) {
-     std::string env_s(env_p);
-     if ((env_s=="NO") || (env_s=="N") || (env_s=="no") || (env_s=="n") ||
-         (env_s=="NEVER") || (env_s=="never")) {
-       if (print_info) printf("INFO (skbio_alt): NVIDIA GPU was detected but use explicitly disabled\n");
-       detected_acc = ACC_CPU;
-     }
-   } else if (const char* env_p = std::getenv("UNIFRAC_USE_NVIDIA_GPU")) {
-     std::string env_s(env_p);
-     if ((env_s=="NO") || (env_s=="N") || (env_s=="no") || (env_s=="n") ||
-         (env_s=="NEVER") || (env_s=="never")) {
-       if (print_info) printf("INFO (skbio_alt): NVIDIA GPU was detected but use explicitly disabled\n");
-       detected_acc = ACC_CPU;
-     }
-   }
- }
-#endif
-#if defined(UNIFRAC_ENABLE_ACC_AMD)
- bool detected_amd_acc = su_acc_amd::acc_found_gpu();
- if (print_info) {
-   if (detected_amd_acc) {
-     printf("INFO (skbio_alt): AMD GPU detected\n");
-   } else {
-     printf("INFO (skbio_alt): AMD GPU not detected\n");
-   }
- }
- if ((detected_acc==ACC_CPU) && detected_amd_acc) {
-   detected_acc = ACC_AMD;
-   if (const char* env_p = std::getenv("UNIFRAC_SKBIO_USE_AMD_GPU")) {
-     std::string env_s(env_p);
-     if ((env_s=="NO") || (env_s=="N") || (env_s=="no") || (env_s=="n") ||
-         (env_s=="NEVER") || (env_s=="never")) {
-       if (print_info) printf("INFO (skbio_alt): AMD GPU was detected but use explicitly disabled\n");
-       detected_acc = ACC_CPU;
-     }
-   } else if (const char* env_p = std::getenv("UNIFRAC_USE_AMD_GPU")) {
-     std::string env_s(env_p);
-     if ((env_s=="NO") || (env_s=="N") || (env_s=="no") || (env_s=="n") ||
-         (env_s=="NEVER") || (env_s=="never")) {
-       if (print_info) printf("INFO (skbio_alt): AMD GPU was detected but use explicitly disabled\n");
-       detected_acc = ACC_CPU;
-     }
-   }
- }
-#endif
-
- if (const char* env_p = std::getenv("UNIFRAC_SKBIO_USE_GPU")) {
-   std::string env_s(env_p);
-   if ((env_s=="NO") || (env_s=="N") || (env_s=="no") || (env_s=="n") ||
-       (env_s=="NEVER") || (env_s=="never")) {
-     if (detected_acc!=ACC_CPU) {
-        if (print_info) printf("INFO (skbio_alt): GPU was detected but use explicitly disabled\n");
-         detected_acc = ACC_CPU;
-     }
-   }
- } else if (const char* env_p = std::getenv("UNIFRAC_USE_GPU")) {
-   std::string env_s(env_p);
-   if ((env_s=="NO") || (env_s=="N") || (env_s=="no") || (env_s=="n") ||
-       (env_s=="NEVER") || (env_s=="never")) {
-     if (detected_acc!=ACC_CPU) {
-        if (print_info) printf("INFO (skbio_alt): GPU was detected but use explicitly disabled\n");
-         detected_acc = ACC_CPU;
-     }
-   }
- }
-
- if (print_info) {
-   if (detected_acc == ACC_CPU) {
-     printf("INFO (skbio_alt): Using CPU (not GPU)\n");
-#if defined(UNIFRAC_ENABLE_ACC_NV)
-   } else if (detected_acc == ACC_NV) {
-     printf("INFO (skbio_alt): Using NVIDIA GPU\n");
-#endif
-#if defined(UNIFRAC_ENABLE_ACC_AMD)
-   } else if (detected_acc == ACC_AMD) {
-     printf("INFO (skbio_alt): Using AMD GPU\n");
-#endif
-   }
- }
- // we can assume int is atomic
- skbio_use_acc = detected_acc;
-}
-
 
 //
 // ======================= permanova ========================
@@ -161,19 +59,21 @@ inline void permanova_perm_fp_sW_T(const TFloat * mat, const uint32_t n_dims,
   const uint64_t mat_size = uint64_t(n_dims)*uint64_t(n_dims);
 
   // There is acc-specific logic here, initialize skbio_use_acc ASAP
-  skbio_check_acc();
+  auto use_acc = skbb::check_use_acc();
 
   uint32_t PERM_CHUNK = 1; // just a dummy default
-  if (skbio_use_acc==ACC_CPU) {
-    PERM_CHUNK = su_cpu::pmn_get_max_parallelism();
-#if defined(UNIFRAC_ENABLE_ACC_NV)
-  } else if (skbio_use_acc==ACC_NV) {
-    PERM_CHUNK = su_acc_nv::pmn_get_max_parallelism();
+  if (false) {
+#if defined(SKBB_ENABLE_ACC_NV)
+  } else if (use_acc==skbb::ACC_NV) {
+    PERM_CHUNK = skbb_acc_nv::pmn_get_max_parallelism();
 #endif
-#if defined(UNIFRAC_ENABLE_ACC_AMD)
-  } else if (skbio_use_acc==ACC_AMD) {
-    PERM_CHUNK = su_acc_amd::pmn_get_max_parallelism();
+#if defined(SKBB_ENABLE_ACC_AMD)
+  } else if (use_acc==skbb::ACC_AMD) {
+    PERM_CHUNK = skbb_acc_amd::pmn_get_max_parallelism();
 #endif
+  } else {
+    // default to CPU
+    PERM_CHUNK = skbb_cpu::pmn_get_max_parallelism();
   }
 
   // need temp bufffer for bulk processing
@@ -198,18 +98,18 @@ inline void permanova_perm_fp_sW_T(const TFloat * mat, const uint32_t n_dims,
   }
 
   // for acc implementations, make a copy of mat into the GPU memory
-#if defined(UNIFRAC_ENABLE_ACC_NV)
-  if (skbio_use_acc==ACC_NV) {
+#if defined(SKBB_ENABLE_ACC_NV)
+  if (use_acc==skbb::ACC_NV) {
     // must remove const as it will indeed write to GPU memory
-    su_acc_nv::acc_copyin_buf(const_cast<TFloat*>(mat),0,mat_size);
-    su_acc_nv::acc_copyin_buf(inv_group_sizes,0,n_groups);
+    skbb_acc_nv::acc_copyin_buf(const_cast<TFloat*>(mat),0,mat_size);
+    skbb_acc_nv::acc_copyin_buf(inv_group_sizes,0,n_groups);
   }
 #endif
-#if defined(UNIFRAC_ENABLE_ACC_AMD)
-  if (skbio_use_acc==ACC_AMD) {
+#if defined(SKBB_ENABLE_ACC_AMD)
+  if (use_acc==skbb::ACC_AMD) {
     // must remove const as it will indeed write to GPU memory
-    su_acc_amd::acc_copyin_buf(const_cast<TFloat*>(mat),0,mat_size);
-    su_acc_amd::acc_copyin_buf(inv_group_sizes,0,n_groups);
+    skbb_acc_amd::acc_copyin_buf(const_cast<TFloat*>(mat),0,mat_size);
+    skbb_acc_amd::acc_copyin_buf(inv_group_sizes,0,n_groups);
   }
 #endif
 
@@ -228,40 +128,42 @@ inline void permanova_perm_fp_sW_T(const TFloat * mat, const uint32_t n_dims,
          }
       }
       // now call the actual permanova
-      if (skbio_use_acc==ACC_CPU) {
-        su_cpu::pmn_f_stat_sW<TFloat>(mat, n_dims,
-                                      permutted_groupings, max_p-tp,
-                                      inv_group_sizes,
-                                      permutted_sWs+tp);
+      if (false) {
 #if defined(UNIFRAC_ENABLE_ACC_NV)
-      } else if (skbio_use_acc==ACC_NV) {
-        su_acc_nv::pmn_f_stat_sW<TFloat>(mat, n_dims,
+      } else if (use_acc==skbb::ACC_NV) {
+        skbb_acc_nv::pmn_f_stat_sW<TFloat>(mat, n_dims,
                                          permutted_groupings, max_p-tp,
                                          inv_group_sizes,
                                          permutted_sWs+tp);
 #endif
 #if defined(UNIFRAC_ENABLE_ACC_AMD)
-      } else if (skbio_use_acc==ACC_AMD) {
-        su_acc_amd::pmn_f_stat_sW<TFloat>(mat, n_dims,
+      } else if (use_acc==skbb::ACC_AMD) {
+        skbb_acc_amd::pmn_f_stat_sW<TFloat>(mat, n_dims,
                                           permutted_groupings, max_p-tp,
                                           inv_group_sizes,
                                           permutted_sWs+tp);
 #endif
+      } else {
+        // as above, default to CPU
+        skbb_cpu::pmn_f_stat_sW<TFloat>(mat, n_dims,
+                                      permutted_groupings, max_p-tp,
+                                      inv_group_sizes,
+                                      permutted_sWs+tp);
       }
   }
 
-#if defined(UNIFRAC_ENABLE_ACC_NV)
-  if (skbio_use_acc==ACC_NV) {
-    su_acc_nv::acc_destroy_buf(inv_group_sizes,0,n_groups);
+#if defined(SKBB_ENABLE_ACC_NV)
+  if (use_acc==skbb::ACC_NV) {
+    skbb_acc_nv::acc_destroy_buf(inv_group_sizes,0,n_groups);
     // must remove const, as it will indeed destroy the copy in GPU memory
-    su_acc_nv::acc_destroy_buf(const_cast<TFloat*>(mat),0,mat_size);
+    skbb_acc_nv::acc_destroy_buf(const_cast<TFloat*>(mat),0,mat_size);
   }
 #endif
-#if defined(UNIFRAC_ENABLE_ACC_AMD)
-  if (skbio_use_acc==ACC_AMD) {
-    su_acc_amd::acc_destroy_buf(inv_group_sizes,0,n_groups);
+#if defined(SKBB_ENABLE_ACC_AMD)
+  if (use_acc==skbb::ACC_AMD) {
+    skbb_acc_amd::acc_destroy_buf(inv_group_sizes,0,n_groups);
     // must remove const, as it will indeed destroy the copy in GPU memory
-    su_acc_amd::acc_destroy_buf(const_cast<TFloat*>(mat),0,mat_size);
+    skbb_acc_amd::acc_destroy_buf(const_cast<TFloat*>(mat),0,mat_size);
   }
 #endif
 

@@ -55,6 +55,9 @@ static void cond_dl_load(const char *fncname,
    pthread_mutex_unlock(&dl_mutex);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+/* This function is sometimes used when included, so prevent the compiler warning */
 static bool dl_load_check() {
 
    pthread_mutex_lock(&dl_mutex);

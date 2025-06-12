@@ -56,8 +56,8 @@ def print_func_indirect_noargs(ftype,nmspace,fname):
     print('%s %s::%s() {'%(ftype,nmspace,fname))
     if (ftype=='bool') and (fname.find('found_gpu')>=0):
         #this is the initial check, allow for the shared library to not being avaialble
-        print('  if (!ssu_load_check()) return false; /* shlib not found */')
-    print('  cond_ssu_load("%s_%s", (void **) &dl_%s_%s);'%(nmspace,fname,nmspace,fname))
+        print('  if (!dl_load_check()) return false; /* shlib not found */')
+    print('  cond_dl_load("%s_%s", (void **) &dl_%s_%s);'%(nmspace,fname,nmspace,fname))
     if ftype=='void':
         print('  (*dl_%s_%s)();'%(nmspace,fname));
     else:
@@ -75,7 +75,7 @@ def print_func_indirect_args(ftype,nmspace,fname,ttype,fargs):
        print('\t\t\t%s,'%patch_type(el,ttype))
     print('\t\t\t%s) {'%patch_type(fargs[-1],ttype))
 
-    print('  cond_ssu_load("%s_%s_%s", (void **) &dl_%s_%s_%s);'%(nmspace,fname,ttype,nmspace,fname,ttype))
+    print('  cond_dl_load("%s_%s_%s", (void **) &dl_%s_%s_%s);'%(nmspace,fname,ttype,nmspace,fname,ttype))
     print('  (*dl_%s_%s_%s)('%(nmspace,fname,ttype))
     for el in fargs[:-1]:
        print('\t%s,'%get_arg_name(el))
@@ -167,13 +167,13 @@ def print_header(variant,method):
         print('#include <stdint.h>')
 
     if method in ('indirect',):
-        # function expected by ssu_ld
-        print('static const char *ssu_get_lib_name() { return "libssu_%s.so";}'%variant)
-        print('#include "ssu_ld.c"')
+        # function expected by skbb_ld
+        print('static const char *dl_get_lib_name() { return "libskbb_%s.so";}'%variant)
+        print('#include "util/skbb_dl.cpp"')
 
     print('')
 
-    return "su_%s"%variant
+    return "skbb_%s"%variant
 
 #
 # ==========================

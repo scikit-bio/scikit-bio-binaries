@@ -8,6 +8,8 @@
  * See LICENSE file for more details
  */
 
+// Implementation specific acceleration primitives
+
 /*
  *
  * This file is used to create the necessary interfaces
@@ -17,14 +19,12 @@
  *
  */
 
+#ifdef SKBB_ACC_NM
+// do nothing if SKBB_ACC_NM is not defined
+
 #include <stdint.h>
 
-#ifndef SUCMP_NM
-/* create a default */
-#define SUCMP_NM su_cpu
-#endif
-
-namespace SUCMP_NM {
+namespace SKBB_ACC_NM {
 
     // do we have access to a GPU?
     bool acc_found_gpu();
@@ -60,3 +60,4 @@ namespace SUCMP_NM {
 
 }
 
+#endif

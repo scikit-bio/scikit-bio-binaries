@@ -11,21 +11,18 @@
 /*
  *
  * This file is used to create the necessary interfaces between
- *   skbio_alt_impl.hpp
+ *   permanova_dyn_impl.hpp
  * by means of
- *   generate_skbio_alt.py
+ *   generate_permanova_dyn.py
  *
  */
 
+#ifdef SKBB_ACC_NM
+// do nothing if SKBB_ACC_NM is not defined
+
 #include <stdint.h>
-#include "skbb_accapi.hpp"
 
-#ifndef SUCMP_NM
-/* create a default */
-#define SUCMP_NM su_cpu
-#endif
-
-namespace SUCMP_NM {
+namespace SKBB_ACC_NM {
 
 	// Return the recommended max parallelism to use in pmn_f_stat_sW
 	int pmn_get_max_parallelism();
@@ -46,3 +43,4 @@ namespace SUCMP_NM {
 			TFloat *group_sWs);
 }
 
+#endif
