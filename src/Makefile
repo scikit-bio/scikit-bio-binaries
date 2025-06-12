@@ -38,6 +38,11 @@ CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
 NV_CXXFLAGS += -std=c++17 -I. $(OPT) -fPIC
 AMD_CXXFLAGS += -std=c++17 -I. $(OPT) -fPIC
 
+clean:
+	# all source files are in subdirectories
+	rm -f *.cpp *.hpp *.h
+	rm -f *.o *.so
+
 api: libskbb.so
 
 install:
