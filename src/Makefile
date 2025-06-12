@@ -41,7 +41,7 @@ AMD_CXXFLAGS += -std=c++17 -I. $(OPT) -fPIC
 clean:
 	# all source files are in subdirectories
 	rm -f *.cpp *.hpp *.h
-	rm -f *.o *.so
+	rm -f *.o *.so *.a *.exe
 
 api: libskbb.so
 
@@ -204,9 +204,24 @@ ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_co
 
 ##
 
-#SKBB_OBJS += skbio_alt.o skbb_accapi_cpu.o skbio_alt_dyn_cpu.o
-
 libskbb.so: $(SKBB_OBJS)
 	$(CXX) $(SO_LDDFLAGS) -o $@ $(SKBB_OBJS) $(BLASLIB)
 
+libskbb_cpu.a: $(SKBB_OBJS)
+	ar -rc $@ $(SKBB_OBJS)
+
+##
+
+test_bins: test_pcoa.exe test_permanova.exe
+
+
+test: test_bins
+	./test_pcoa.exe
+	./test_permanova.exe
+
+test_pcoa.exe: tests/test_pcoa.cpp libskbb_cpu.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $< -o $@ libskbb_cpu.a $(BLASLIB)
+
+test_permanova.exe: tests/test_permanova.cpp libskbb_cpu.a
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $< -o $@ libskbb_cpu.a
 
