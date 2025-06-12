@@ -51,13 +51,19 @@ install:
 ##
 # Utility/helper modules
 
-SKBB_OBJS := util_rand.o skbb_detect_acc.o
+SKBB_OBJS := util_rand.o
 
 util_rand.o: util/rand.cpp util/rand.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+ifndef NOGPU
+
+SKBB_OBJS += skbb_detect_acc.o
+
 skbb_detect_acc.o: util/skbb_detect_acc.cpp util/skbb_detect_acc.hpp util/skbb_accapi.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+endif
 
 ##
 # skbb_accapi dynamic code wrappers generation

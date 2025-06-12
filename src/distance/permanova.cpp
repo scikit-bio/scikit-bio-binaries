@@ -14,6 +14,10 @@
 
 #include "distance/permanova.hpp"
 
+#if defined(SKBB_ENABLE_ACC_NV) || defined(SKBB_ENABLE_ACC_AMD)
+#include "util/skbb_detect_acc.hpp"
+#endif
+
 #define SKBB_ACC_NM  skbb_cpu
 #include "util/skbb_accapi.hpp"
 #include "distance/permanova_dyn.hpp"
@@ -35,7 +39,7 @@
 
 
 #include "util/rand.hpp"
-#include "util/skbb_detect_acc.hpp"
+
 #include <stdlib.h> 
 
 #include <algorithm>
@@ -56,10 +60,12 @@ inline void permanova_perm_fp_sW_T(const TFloat * mat, const uint32_t n_dims,
                                    const uint32_t *group_sizes, uint32_t n_groups,
                                    const uint32_t n_perm,
                                    TFloat *permutted_sWs) {
-  const uint64_t mat_size = uint64_t(n_dims)*uint64_t(n_dims);
-
+#if defined(SKBB_ENABLE_ACC_NV) || defined(SKBB_ENABLE_ACC_AMD)
   // There is acc-specific logic here, initialize skbio_use_acc ASAP
   auto use_acc = skbb::check_use_acc();
+  // mat_size only needed for non-cpu paths
+  const uint64_t mat_size = uint64_t(n_dims)*uint64_t(n_dims);
+#endif
 
   uint32_t PERM_CHUNK = 1; // just a dummy default
   if (false) {
