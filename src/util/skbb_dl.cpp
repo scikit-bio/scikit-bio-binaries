@@ -79,4 +79,5 @@ static bool dl_load_check() {
    return true;
 }
 
+#pragma GCC diagnostic pop
 
