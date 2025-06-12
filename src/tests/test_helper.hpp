@@ -12,6 +12,7 @@
 #include <cmath>
 #include <unordered_set>
 #include <string.h>
+#include <vector>
 
 /*
  * test harness adapted from

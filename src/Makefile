@@ -32,6 +32,7 @@ ifeq ($(PLATFORM),Darwin)
 else
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -shared
         BLASLIB += -lgfortran -lquadmath
+        LDFLAGS += -ldl
 endif
 
 CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
@@ -171,7 +172,7 @@ endif
 ##
 
 ifdef SKBB_ENABLE_ACC_AMD
-SKBB_OBJS += permanova_dyn_acc_amd.o
+SKBB_OBJS += permanova_acc_amd.o
 
 
 permanova_dyn_acc_amd.h: distance/permanova_dyn_impl.hpp
@@ -181,18 +182,16 @@ permanova_dyn_acc_amd.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_amd
 permanova_acc_amd.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_amd.h
 	./tools/generate_permanova_dyn.py acc_amd indirect > $@
 
+permanova_acc_amd.o: permanova_acc_amd.cpp permanova_dyn_acc_amd.h distance/permanova_dyn.hpp util/skbb_dl.cpp
+	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_amd -c $< -o $@
+
+permanova_dyn_acc_amd.o: permanova_dyn_acc_amd.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
+	$(AMD_CXX) $(AMD_CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_amd -c $< -o $@
+
 endif
 
 
-##
 
-
-##
-
-skbio_alt_acc_amd.o: skbio_alt_acc_amd.cpp skbio_alt_dyn.hpp skbio_alt_dyn_acc_amd.h
-	$(CXX) $(CXXFLAGS) -DSUCMP_NM=su_acc_amd -c $< -o $@
-skbio_alt_dyn_acc_amd.o: skbio_alt_dyn_acc_amd.cpp skbio_alt_dyn_acc_amd.h skbio_alt_dyn_impl.hpp
-	$(AMD_CXX) $(AMD_CXXFLAGS) -DSUCMP_NM=su_acc_amd -c $< -o $@
 
 ##
 # Ordination methods
@@ -220,8 +219,8 @@ test: test_bins
 	./test_permanova.exe
 
 test_pcoa.exe: tests/test_pcoa.cpp libskbb_cpu.a
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $< -o $@ libskbb_cpu.a $(BLASLIB)
+	$(CXX) $(CXXFLAGS) $< -o $@ libskbb_cpu.a $(LDFLAGS) $(BLASLIB)
 
 test_permanova.exe: tests/test_permanova.cpp libskbb_cpu.a
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $< -o $@ libskbb_cpu.a
+	$(CXX) $(CXXFLAGS) $< -o $@ libskbb_cpu.a $(LDFLAGS)
 
