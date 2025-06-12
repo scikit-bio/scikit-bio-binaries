@@ -203,8 +203,13 @@ ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_co
 
 ##
 
-libskbb.so: $(SKBB_OBJS)
-	$(CXX) $(SO_LDDFLAGS) -o $@ $(SKBB_OBJS) $(BLASLIB)
+skbb_extern.o: extern/skbb.cpp extern/skbb.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+##
+
+libskbb.so: skbb_extern.o $(SKBB_OBJS)
+	$(CXX) $(SO_LDDFLAGS) -o $@ skbb_extern.o $(SKBB_OBJS) $(BLASLIB)
 
 libskbb_cpu.a: $(SKBB_OBJS)
 	ar -rc $@ $(SKBB_OBJS)
