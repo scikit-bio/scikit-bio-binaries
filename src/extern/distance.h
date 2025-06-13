@@ -7,8 +7,8 @@
  * See LICENSE file for more details
  */
 
-#ifndef SKBB_H
-#define SKBB_H
+#ifndef SKBB_EXTERN_DISTANCE_H
+#define SKBB_EXTERN_DISTANCE_H
 
 #ifdef __cplusplus
 #include <vector>

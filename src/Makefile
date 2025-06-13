@@ -47,7 +47,10 @@ clean:
 api: libskbb.so
 
 install:
-	#TBD
+	mkdir -p "${PREFIX}/lib"
+	mkdir -p "${PREFIX}/include/scikit-bio-binaries"
+	rm -f "${PREFIX}/lib/libskbb.so"; cp "libskbb.so" "${PREFIX}/lib/"
+	rm -f "${PREFIX}/include/scikit-bio-binaries/distance.h"; cp extern/distance.h "${PREFIX}/include/scikit-bio-binaries/"
 
 ##
 # Utility/helper modules
@@ -203,7 +206,7 @@ ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_co
 
 ##
 
-skbb_extern.o: extern/skbb.cpp extern/skbb.h
+skbb_extern.o: extern/skbb.cpp extern/distance.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 ##

@@ -7,7 +7,7 @@
  * See LICENSE file for more details
  */
 
-#include "skbb.h"
+#include "extern/distance.h"
 
 #include "distance/permanova.hpp"
 
