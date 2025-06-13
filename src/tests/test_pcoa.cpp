@@ -128,6 +128,8 @@ void test_pcoa_fsvd() {
       0.73606053 , 0.76138933 , 0.79249029 , 0.72959894 , 0.78944369 , 0.58314638
     , 0.68972056 , 0.71514083 , 0. };
 
+    float matrix_fp32[9*9];
+    for (int i=0; i<(9*9); i++) matrix_fp32[i] = matrix[i];
 
     const uint32_t n_samples = 9;
 
@@ -239,9 +241,9 @@ void test_pcoa_fsvd() {
     double exp4c[] = {0.22630343, 0.16125338, 0.13805791, 0.13007231, 0.10349879};
 
     {
-      double *eigenvalues;
-      double *samples;
-      double *proportion_explained;
+      double eigenvalues[5];
+      double samples[5*9];
+      double proportion_explained[5];
 
       skbb::pcoa_fsvd(n_samples, matrix, 5, eigenvalues, samples, proportion_explained); 
 
@@ -261,16 +263,39 @@ void test_pcoa_fsvd() {
         ASSERT(fabs(proportion_explained[i] - exp4c[i]) < 0.00001);
       } 
 
-      free(eigenvalues);
-      free(samples);
-      free(proportion_explained);
+    }
+
+    // Test PCoA fp32
+    {
+      float eigenvalues_fp32[5];
+      float samples_fp32[5*9];
+      float proportion_explained_fp32[5];
+
+      skbb::pcoa_fsvd(n_samples, matrix_fp32, 5, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
+
+      for(int i = 0; i < 5; i++) {
+        //printf("%i %f %f\n",i,float(eigenvalues_fp32[i]),float(exp4a[i]));
+       ASSERT(fabs(eigenvalues_fp32[i] - exp4a[i]) < 0.00001);
+      }
+
+      // signs may flip, that's normal
+      for(int i = 0; i < (5*9); i++) {
+        //printf("%i %f %f %f\n",i,float(samples_fp32[i]),float(exp4b[i]),float(fabs(samples_fp32[i]) - fabs(exp4b[i])));
+        ASSERT( fabs(fabs(samples_fp32[i]) - fabs(exp4b[i])) < 0.00001);
+      }
+
+      for(int i = 0; i < 5; i++) {
+        //printf("%i %f %f\n",i,float(proportion_explained_fp32[i]),float(exp4c[i]));
+        ASSERT(fabs(proportion_explained_fp32[i] - exp4c[i]) < 0.00001);
+      }
+
     }
 
     // Test PCoA mixed mode
     {
-      float *eigenvalues_fp32;
-      float *samples_fp32;
-      float *proportion_explained_fp32;
+      float eigenvalues_fp32[5];
+      float samples_fp32[5*9];
+      float proportion_explained_fp32[5];
 
       skbb::pcoa_fsvd(n_samples, matrix, 5, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
 
@@ -290,16 +315,13 @@ void test_pcoa_fsvd() {
         ASSERT(fabs(proportion_explained_fp32[i] - exp4c[i]) < 0.00001);
       }
 
-      free(eigenvalues_fp32);
-      free(samples_fp32);
-      free(proportion_explained_fp32);
     }
 
     // test in-place
     {
-      double *eigenvalues;
-      double *samples;
-      double *proportion_explained;
+      double eigenvalues[5];
+      double samples[5*9];
+      double proportion_explained[5];
 
       skbb::pcoa_fsvd_inplace(n_samples, matrix, 5, eigenvalues, samples, proportion_explained);
       // Note: matrix content has been destroyed
@@ -320,9 +342,33 @@ void test_pcoa_fsvd() {
         ASSERT(fabs(proportion_explained[i] - exp4c[i]) < 0.00001);
       }
 
-      free(eigenvalues);
-      free(samples);
-      free(proportion_explained);
+    }
+
+    // in-plave fp32
+    {
+      float eigenvalues[5];
+      float samples[5*9];
+      float proportion_explained[5];
+
+      skbb::pcoa_fsvd_inplace(n_samples, matrix_fp32, 5, eigenvalues, samples, proportion_explained);
+      // Note: matrix_fp32 content has been destroyed
+
+      for(int i = 0; i < 5; i++) {
+        //printf("%i %f %f\n",i,float(eigenvalues[i]),float(exp4a[i]));
+        ASSERT(fabs(eigenvalues[i] - exp4a[i]) < 0.00001);
+      }
+
+      // signs may flip, that's normal
+      for(int i = 0; i < (5*9); i++) {
+        //printf("%i %f %f %f\n",i,float(samples[i]),float(exp4b[i]),float(fabs(samples[i]) - fabs(exp4b[i])));
+        ASSERT( fabs(fabs(samples[i]) - fabs(exp4b[i])) < 0.00001);
+      }
+
+      for(int i = 0; i < 5; i++) {
+        //printf("%i %f %f\n",i,float(proportion_explained[i]),float(exp4c[i]));
+        ASSERT(fabs(proportion_explained[i] - exp4c[i]) < 0.00001);
+      }
+
     }
 
     SUITE_END();

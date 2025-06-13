@@ -86,22 +86,22 @@ void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n
  *   mat       - Distance matrix (n_dims x n_dims)
  *   n_eighs   - Number of eigenvalues to return
  *
- *  Output parameters: (returns a new buffer, must be released by caller)
- *   eigenvalues          - Array of size n_eighs
+ *  Output parameters:
+ *   eigenvalues          - Array of size n_eighs, pre-allocated
  *   samples              - The position of the samples in the ordination space,
  *                          row-indexed by the sample id.
- *                          Matrix of size (n_eighs x n_dims)
- *   proportion_explained - Array of size n_eighs.
+ *                          Matrix of size (n_eighs x n_dims), pre-allocated
+ *   proportion_explained - Array of size n_eighs, pre-allocated
  *                          The index corresponds to the ordination axis labels.
 */
 
-void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained);
-void pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
-void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
+void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]);
+void pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
+void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
 
 // in-place version, will use mat as temp buffer internally
-void pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained);
-void pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
+void pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]);
+void pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
 
 }
 

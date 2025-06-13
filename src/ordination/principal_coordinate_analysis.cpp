@@ -554,21 +554,20 @@ public:
  *   center_obj- Buffer holding the centered matrix buffer (n_dims x n_dims)
  *   n_eighs   - Number of eigenvalues to return
  *
- *  Output parameters: (returns a new buffer, must be released by caller)
- *   eigenvalues          - Array of size n_eighs
+ *  Output parameters:
+ *   eigenvalues          - Array of size n_eighs, pre-allocated
  *   samples              - The position of the samples in the ordination space,
  *                          row-indexed by the sample id.
- *                          Matrix of size (n_eighs x n_dims)
- *   proportion_explained - Array of size n_eighs.
+ *                          Matrix of size (n_eighs x n_dims), pre-allocated
+ *   proportion_explained - Array of size n_eighs, pre-allocated
  *                          The index corresponds to the ordination axis labels.
 */
 
 template<class TRealIn, class TReal, class TCenter>
-static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_obj, const uint32_t n_eighs, TReal * &eigenvalues, TReal * &samples,TReal * &proportion_explained) {
-  proportion_explained = (TReal *) malloc(sizeof(TReal)*n_eighs);
-
+static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_obj, const uint32_t n_eighs, TReal eigenvalues[], TReal samples[], TReal proportion_explained[]) {
   TReal diag_sum = 0.0;
-  TReal *eigenvectors = NULL;
+  // we will use the samples buffer to hold the eigenvectors during compute
+  TReal * const eigenvectors = samples;
 
   {
     TReal *centered = center_obj.get_buf();
@@ -582,8 +581,6 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
 
     // Find eigenvalues and eigenvectors
     // Use the Fast method... will return the allocated buffers
-    eigenvalues = (TReal *) malloc(uint64_t(n_eighs)*sizeof(TReal));
-    eigenvectors = (TReal *) malloc(uint64_t(n_dims)*uint64_t(n_eighs)*sizeof(TReal));
     find_eigens_fast_T<TReal>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
 
     center_obj.release_buf();
@@ -601,7 +598,8 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
   // needed to represent n points in a euclidean space.
   // samples = eigvecs * np.sqrt(eigvals) 
   // we will  just update in place and pass out
-  samples = eigenvectors;
+  // Reminder:
+  //  samples == eigenvectors;
 
   // use proportion_explained as tmp buffer here
   {
@@ -609,7 +607,8 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
     for (uint32_t i=0; i<n_eighs; i++) sqvals[i]= sqrt(eigenvalues[i]);
 
     // we will  just update in place and pass out
-    samples = eigenvectors;
+    // Reminder:
+    //  samples == eigenvectors;
 
 #pragma omp parallel for default(shared)
     for (uint32_t row=0; row<n_dims; row++) {
@@ -627,27 +626,27 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
 // Main, external interfaces
 //
 
-void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]) {
   skbb::NewCentered<double> cobj(n_dims);
   pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]) {
   skbb::NewCentered<float> cobj(n_dims);
   pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]) {
   skbb::NewCentered<float> cobj(n_dims);
   pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]) {
   skbb::InPlaceCentered<double> cobj(mat);
   pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]) {
   skbb::InPlaceCentered<float> cobj(mat);
   pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
