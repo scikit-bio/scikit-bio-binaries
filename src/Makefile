@@ -27,7 +27,7 @@ endif
 BLASLIB=-llapacke -lcblas
 
 ifeq ($(PLATFORM),Darwin)
-        SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/lib$(SSU).so
+        SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/libskbb.so
         NOGPU := 1
 else
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -shared
