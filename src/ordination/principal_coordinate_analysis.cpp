@@ -470,23 +470,21 @@ namespace skbb {
 template<class TReal>
 class NewCentered {
 private:
-   const uint32_t n_samples;
    const uint32_t n_dims;
    TReal * centered_buf;
 public:
-   NewCentered(const uint32_t _n_samples, const uint32_t _n_dims) 
-   : n_samples(_n_samples)
-   , n_dims(_n_dims)
+   NewCentered(const uint32_t _n_dims) 
+   : n_dims(_n_dims)
    , centered_buf(NULL)
    {}
 
    TReal * get_buf() {
-     if (centered_buf==NULL) centered_buf = (TReal *) malloc(sizeof(TReal)*uint64_t(n_samples)*uint64_t(n_samples));
+     if (centered_buf==NULL) centered_buf = new TReal[uint64_t(n_dims)*uint64_t(n_dims)];
      return centered_buf;
    }
 
    void release_buf() {
-     if (centered_buf!=NULL) free(centered_buf);
+     if (centered_buf!=NULL) delete[] centered_buf;
      centered_buf=NULL;
    }
 
@@ -547,6 +545,8 @@ public:
 // eigenvalues - out, alocated buffer of size n_dims
 // samples     - out, alocated buffer of size n_dims x n_samples
 // proportion_explained - out, allocated buffer of size n_dims
+
+// Note: Using (n_samples, n_dims) instead of (n_dims, n_eighs) for historical reasons, should be changed
 
 template<class TRealIn, class TReal, class TCenter>
 inline void pcoa_T(TRealIn mat[], TCenter &center_obj, const uint32_t n_samples, const uint32_t n_dims, TReal * &eigenvalues, TReal * &samples,TReal * &proportion_explained) {
@@ -612,29 +612,28 @@ inline void pcoa_T(TRealIn mat[], TCenter &center_obj, const uint32_t n_samples,
 // Main, external interfaces
 //
 
-void skbb::pcoa_fsvd(const double mat[], const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
-  skbb::NewCentered<double> cobj(n_samples, n_dims);
-  pcoa_T(mat, cobj , n_samples, n_dims, eigenvalues, samples, proportion_explained);
+void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+  skbb::NewCentered<double> cobj(n_dims);
+  pcoa_T(mat, cobj , n_dims, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd(const float  mat[], const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
-  skbb::NewCentered<float> cobj(n_samples, n_dims);
-  pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
+void skbb::pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+  skbb::NewCentered<float> cobj(n_dims);
+  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-// Note: tentatively deprecated
-void skbb::pcoa_fsvd(const double mat[], const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
-  skbb::NewCentered<float> cobj(n_samples, n_dims);
-  pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
+void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+  skbb::NewCentered<float> cobj(n_dims);
+  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(double mat[], const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained) {
   skbb::InPlaceCentered<double> cobj(mat);
-  pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
+  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(float  mat[], const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::InPlaceCentered<float> cobj(mat);
-  pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
+  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
 }
 

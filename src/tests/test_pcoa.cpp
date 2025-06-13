@@ -183,7 +183,7 @@ void test_pcoa_fsvd() {
       double *samples;
       double *proportion_explained;
 
-      skbb::pcoa_fsvd(matrix, n_samples, 5, eigenvalues, samples, proportion_explained); 
+      skbb::pcoa_fsvd(n_samples, matrix, 5, eigenvalues, samples, proportion_explained); 
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues[i]),float(exp4a[i]));
@@ -212,7 +212,7 @@ void test_pcoa_fsvd() {
       float *samples_fp32;
       float *proportion_explained_fp32;
 
-      skbb::pcoa_fsvd(matrix, n_samples, 5, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
+      skbb::pcoa_fsvd(n_samples, matrix, 5, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues_fp32[i]),float(exp4a[i]));
@@ -241,7 +241,7 @@ void test_pcoa_fsvd() {
       double *samples;
       double *proportion_explained;
 
-      skbb::pcoa_fsvd_inplace(matrix, n_samples, 5, eigenvalues, samples, proportion_explained);
+      skbb::pcoa_fsvd_inplace(n_samples, matrix, 5, eigenvalues, samples, proportion_explained);
       // Note: matrix content has been destroyed
 
       for(int i = 0; i < 5; i++) {
