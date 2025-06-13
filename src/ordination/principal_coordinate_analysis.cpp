@@ -27,8 +27,8 @@
 //
 
 // Compute the E_matrix with means
-// centered must be pre-allocated and same size as mat (n_samples*n_samples)...will work even if centered==mat
-// row_means must be pre-allocated and n_samples in size
+// centered must be pre-allocated and same size as mat (n_dims*n_dims)...will work even if centered==mat
+// row_means must be pre-allocated and n_dims in size
 template<class TRealIn, class TReal>
 static inline void E_matrix_means(const uint32_t n_dims,                                // IN
                            const TRealIn mat[],                                         // IN
@@ -194,7 +194,7 @@ void skbb::mat_to_centered(const uint32_t n_dims, const double mat[], float  cen
 // mat must be   cols x rows
 // other must be cols x rows (ColOrder... rows elements together)
 template<class TReal>
-inline void mat_dot_T(const TReal *mat, const TReal *other, const uint32_t rows, const uint32_t cols, TReal *out);
+static inline void mat_dot_T(const TReal *mat, const TReal *other, const uint32_t rows, const uint32_t cols, TReal *out);
 
 template<>
 inline void mat_dot_T<double>(const double *mat, const double *other, const uint32_t rows, const uint32_t cols, double *out)
@@ -215,8 +215,8 @@ inline void mat_dot_T<float>(const float *mat, const float *other, const uint32_
 // centered == n x n
 // randomized = k*2 x n (ColOrder... n elements together)
 template<class TReal>
-inline void centered_randomize_T(const TReal centered[], const uint32_t n_samples, const uint32_t k, TReal randomized[]) {
-  uint64_t matrix_els = uint64_t(n_samples)*uint64_t(k);
+static inline void centered_randomize_T(const TReal centered[], const uint32_t n_dims, const uint32_t k, TReal randomized[]) {
+  uint64_t matrix_els = uint64_t(n_dims)*uint64_t(k);
   TReal * tmp = (TReal *) malloc(matrix_els*sizeof(TReal));
 
   auto& myRandomGenerator = skbb::get_random_generator();
@@ -233,12 +233,12 @@ inline void centered_randomize_T(const TReal centered[], const uint32_t n_sample
   // Since centered is symmetric, it works just fine
 
   //First compute the top part of H
-  mat_dot_T<TReal>(centered,G,n_samples,k,randomized);
+  mat_dot_T<TReal>(centered,G,n_dims,k,randomized);
 
   // power method... single iteration.. store in 2nd part of output
   // Reusing tmp buffer for intermediate storage
-  mat_dot_T<TReal>(centered,randomized,n_samples,k,tmp);
-  mat_dot_T<TReal>(centered,tmp,n_samples,k,randomized+matrix_els);
+  mat_dot_T<TReal>(centered,randomized,n_dims,k,tmp);
+  mat_dot_T<TReal>(centered,tmp,n_dims,k,randomized+matrix_els);
 
   free(tmp);
 }
@@ -249,7 +249,7 @@ inline void centered_randomize_T(const TReal centered[], const uint32_t n_sample
 // H is in,overwritten by Q on out
 // H is (r x c), Q is (r x qc), with rc<=c
 template<class TReal>
-inline int qr_i_T(const uint32_t rows, const uint32_t cols, TReal *H, uint32_t &qcols);
+static inline int qr_i_T(const uint32_t rows, const uint32_t cols, TReal *H, uint32_t &qcols);
 
 template<>
 inline int qr_i_T<double>(const uint32_t rows, const uint32_t cols, double *H, uint32_t &qcols) {
@@ -334,7 +334,7 @@ inline void skbb::QR<double>::qdot_l_sq(const double *mat, double *res) {
 }
 
 template<>
-inline void skbb::QR<float>::qdot_l_sq(const float *mat, float *res) {
+void skbb::QR<float>::qdot_l_sq(const float *mat, float *res) {
   cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rows , cols, cols, 1.0, Q, rows, mat, cols, 0.0, res, rows);
 }
 
@@ -389,24 +389,24 @@ inline void transpose_T(const uint64_t rows, const uint64_t cols, const TReal in
 //     Original Paper: https://arxiv.org/abs/1007.5510
 // centered == n x n, must be symmetric, Note: will be used in-place as temp buffer
 template<class TReal>
-inline void find_eigens_fast_T(const uint32_t n_samples, const uint32_t n_dims, TReal centered[], TReal * &eigenvalues, TReal * &eigenvectors) {
-  const uint32_t k = n_dims+2;
+inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const uint32_t n_eighs, TReal * &eigenvalues, TReal * &eigenvectors) {
+  const uint32_t k = n_eighs+2;
 
   int rc;
 
-  TReal *S = (TReal *) malloc(uint64_t(n_samples)*sizeof(TReal));  // take worst case size as a start
+  TReal *S = (TReal *) malloc(uint64_t(n_dims)*sizeof(TReal));  // take worst case size as a start
   TReal *Ut = NULL;
 
   {
-    TReal *H = (TReal *) malloc(sizeof(TReal)*uint64_t(n_samples)*uint64_t(k)*2);
+    TReal *H = (TReal *) malloc(sizeof(TReal)*uint64_t(n_dims)*uint64_t(k)*2);
 
     // step 1
-    centered_randomize_T<TReal>(centered, n_samples, k, H);
+    centered_randomize_T<TReal>(centered, n_dims, k, H);
 
     // step 2
     // QR decomposition of H 
 
-    skbb::QR<TReal> qr_obj(n_samples, k*2, H); // H is now owned by qr_obj, as Q
+    skbb::QR<TReal> qr_obj(n_dims, k*2, H); // H is now owned by qr_obj, as Q
 
     // step 3
     // T = centered * Q (since centered^T == centered, due to being symmetric)
@@ -421,14 +421,14 @@ inline void find_eigens_fast_T(const uint32_t n_samples, const uint32_t n_dims, 
     // update T in-place, Wt on output (Vt according to the LAPACK nomenclature)
     rc=svd_it_T<TReal>(qr_obj.rows,qr_obj.cols, T, S);
     if (rc!=0) {
-      fprintf(stderr, "svd_it_T<TReal>(n_samples, T, S) failed with %i\n",rc);
-      exit(1); // should never fail
+      fprintf(stderr, "svd_it_T<TReal>(n_dims, T, S) failed with %i\n",rc);
+      exit(1); // should never fail, but just in case, like a segfault
     }
 
     // step 5
     // Compute U = Q*Wt^t
     {
-      // transpose Wt -> W, Wt uses n_samples strides
+      // transpose Wt -> W, Wt uses n_dims strides
       TReal * W = (TReal *) malloc(sizeof(TReal)*uint64_t(qr_obj.cols)*uint64_t(qr_obj.cols));
       transpose_sq_st_T<TReal>(qr_obj.cols, qr_obj.rows, T, W);  // Wt == T on input
 
@@ -444,24 +444,24 @@ inline void find_eigens_fast_T(const uint32_t n_samples, const uint32_t n_dims, 
   // get the interesting subset, and return
   
   // simply truncate the values, since it is a vector
-  eigenvalues  = (TReal *) realloc(S, sizeof(TReal)*n_dims);
+  eigenvalues  = (TReal *) realloc(S, sizeof(TReal)*n_eighs);
 
   // *eigenvectors = U = Vt
   // use only the truncated part of W, then transpose
-  TReal *U = (TReal *) malloc(uint64_t(n_samples)*uint64_t(n_dims)*sizeof(TReal));
+  TReal *U = (TReal *) malloc(uint64_t(n_dims)*uint64_t(n_eighs)*sizeof(TReal));
 
-  transpose_T<TReal>(n_samples, n_dims, Ut, U);
+  transpose_T<TReal>(n_dims, n_eighs, Ut, U);
   eigenvectors = U;
 
   free(Ut);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, double centered[], double * &eigenvalues, double * &eigenvectors) {
-  find_eigens_fast_T<double>(n_samples, n_dims, centered, eigenvalues, eigenvectors);
+void skbb::find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double * &eigenvalues, double * &eigenvectors) {
+  find_eigens_fast_T<double>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, float centered[], float * &eigenvalues, float * &eigenvectors) {
-  find_eigens_fast_T<float>(n_samples, n_dims, centered, eigenvalues, eigenvectors);
+void skbb::find_eigens_fast(const uint32_t n_dims, float centered[], const uint32_t n_eighs, float * &eigenvalues, float * &eigenvectors) {
+  find_eigens_fast_T<float>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
 }
 
 // helper class
@@ -574,7 +574,7 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
     // Use the Fast method... will return the allocated buffers
     eigenvalues = NULL;
     eigenvectors = NULL;
-    find_eigens_fast_T<TReal>(n_dims,n_eighs,centered,eigenvalues,eigenvectors);
+    find_eigens_fast_T<TReal>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
 
     center_obj.release_buf();
   }

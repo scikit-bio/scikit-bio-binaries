@@ -39,13 +39,25 @@ void mat_to_centered(const uint32_t n_dims, const double mat[], double centered[
 void mat_to_centered(const uint32_t n_dims, const float  mat[], float  centered[]);
 void mat_to_centered(const uint32_t n_dims, const double mat[], float  centered[]);
 
-// Note: Helper function
-// Find eigen values and vectors
-// Based on N. Halko, P.G. Martinsson, Y. Shkolnisky, and M. Tygert.
-//     Original Paper: https://arxiv.org/abs/1007.5510
-// centered == n x n, must be symmetric, Note: will be used in-place as temp buffer
-void find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, double centered[], double * &eigenvalues, double * &eigenvectors);
-void find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, float  centered[], float  * &eigenvalues, float  * &eigenvectors);
+/*
+ * Performs singular value decomposition, or more specifically in
+ * this case eigendecomposition, using fast heuristic algorithm
+ * nicknamed "FSVD" (FastSVD), adapted and optimized from the algorithm
+ * described by Halko et al (2011).
+ *   N. Halko, P.G. Martinsson, Y. Shkolnisky, and M. Tygert.
+ *  Original Paper: https://arxiv.org/abs/1007.5510
+ *
+ *  Input parameters:
+ *   n_dims    - Size of the matrix
+ *   centered  - Centered distance matrix (n_dims x n_dims), will be overwritten during compute
+ *   n_eighs   - Number of eigenvalues to return
+ *
+ *  Output parameters: (returns a new buffer, must be released by caller)
+ *   eigenvalues          - Array of size n_eighs
+ *   eigenvectors         - Array of size n_eighs
+ */
+void find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double * &eigenvalues, double * &eigenvectors);
+void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n_eighs, float  * &eigenvalues, float  * &eigenvectors);
 
 /*
  *  Perform Principal Coordinate Analysis.

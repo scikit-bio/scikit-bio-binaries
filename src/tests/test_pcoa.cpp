@@ -154,12 +154,20 @@ void test_pcoa_fsvd() {
      , -0.00621856 , -0.00719229 , 0.24561762 };
 
     double *centered = (double *) malloc(9*9*sizeof(double));
+    float *centered_fp32 = (float *) malloc(9*9*sizeof(float));
 
     skbb::mat_to_centered(n_samples, matrix, centered);
 
     for(int i = 0; i < (9*9); i++) {
       //printf("%i %f %f\n",i,float(centered[i]),float(exp[i]));
       ASSERT(fabs(centered[i] - exp2[i]) < 0.00001);
+    }
+
+    skbb::mat_to_centered(n_samples, matrix, centered_fp32);
+
+    for(int i = 0; i < (9*9); i++) {
+      //printf("%i %f %f\n",i,float(centered_fp32[i]),float(exp[i]));
+      ASSERT(fabs(centered_fp32[i] - exp2[i]) < 0.00001);
     }
 
     // Test eigens
@@ -179,7 +187,7 @@ void test_pcoa_fsvd() {
     {
       double *eigenvalues;
       double *eigenvectors;
-      skbb::find_eigens_fast(n_samples, 5, centered, eigenvalues, eigenvectors);
+      skbb::find_eigens_fast(n_samples, centered, 5, eigenvalues, eigenvectors);
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues[i]),float(exp3a[i]));
@@ -195,6 +203,27 @@ void test_pcoa_fsvd() {
       free(eigenvectors);
       free(eigenvalues);
     }
+    {
+      float *eigenvalues;
+      float *eigenvectors;
+      skbb::find_eigens_fast(n_samples, centered_fp32, 5, eigenvalues, eigenvectors);
+
+      for(int i = 0; i < 5; i++) {
+        //printf("%i %f %f\n",i,float(eigenvalues[i]),float(exp3a[i]));
+        ASSERT(fabs(eigenvalues[i] - exp3a[i]) < 0.00001);
+      }
+
+      // signs may flip, that's normal
+      for(int i = 0; i < (5*9); i++) {
+        //printf("%i %f %f %f\n",i,float(eigenvectors[i]),float(exp3b[i]),float(fabs(eigenvectors[i]) - fabs(exp3b[i])));
+        ASSERT( fabs(fabs(eigenvectors[i]) - fabs(exp3b[i])) < 0.00001);
+      }
+    
+      free(eigenvectors);
+      free(eigenvalues);
+    }
+
+    free(centered_fp32);
     free(centered);
 
 
