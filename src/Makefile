@@ -1,7 +1,8 @@
-.PHONY: all api api_acc install clean
+.PHONY: all api install test_bins test clean clean_install
 
 all:
 	$(MAKE) api
+	$(MAKE) test_bins
 	$(MAKE) install
 
 PLATFORM := $(shell uname -s)
@@ -22,17 +23,16 @@ ifndef NOGPU
    # AMD GPUs
    CXXFLAGS += -DSKBB_ENABLE_ACC_AMD=1
    SKBB_ENABLE_ACC_AMD := 1
+   LDFLAGS += -ldl
 endif
 
 BLASLIB=-llapacke -lcblas
 
 ifeq ($(PLATFORM),Darwin)
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/libskbb.so
-        NOGPU := 1
 else
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -shared
         BLASLIB += -lgfortran -lquadmath
-        LDFLAGS += -ldl
 endif
 
 CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
@@ -43,8 +43,6 @@ clean:
 	# all source files are in subdirectories
 	rm -f *.cpp *.hpp *.h
 	rm -f *.o *.so *.a *.exe
-
-api: libskbb.so
 
 ##
 # Utility/helper modules
@@ -211,6 +209,8 @@ skbb_extern_ordination.o: extern/skbb_ordination.cpp extern/ordination.h ordinat
 
 ##
 
+api: libskbb.so
+
 libskbb.so: $(SHBB_EXTERN_OBJS) libskbb_cpu.a
 	$(CXX) $(SO_LDDFLAGS) -o $@ $(SHBB_EXTERN_OBJS) libskbb_cpu.a $(BLASLIB)
 
@@ -224,6 +224,10 @@ install:
 	mkdir -p "${PREFIX}/include/scikit-bio-binaries"
 	rm -f "${PREFIX}/lib/libskbb.so"; cp "libskbb.so" "${PREFIX}/lib/"
 	for f in $(SHBB_EXTERN_HS); do rm -f "${PREFIX}/include/scikit-bio-binaries/$${f}"; cp "extern/$${f}" "${PREFIX}/include/scikit-bio-binaries/"; done
+
+clean_install:
+	rm -f "${PREFIX}/lib/libskbb.so"
+	for f in $(SHBB_EXTERN_HS); do rm -f "${PREFIX}/include/scikit-bio-binaries/$${f}"; done
 
 ##
 
