@@ -211,8 +211,8 @@ skbb_extern_ordination.o: extern/skbb_ordination.cpp extern/ordination.h ordinat
 
 ##
 
-libskbb.so: $(SHBB_EXTERN_OBJS) $(SKBB_OBJS)
-	$(CXX) $(SO_LDDFLAGS) -o $@ $(SHBB_EXTERN_OBJS) $(SKBB_OBJS) $(BLASLIB)
+libskbb.so: $(SHBB_EXTERN_OBJS) libskbb_cpu.a
+	$(CXX) $(SO_LDDFLAGS) -o $@ $(SHBB_EXTERN_OBJS) libskbb_cpu.a $(BLASLIB)
 
 libskbb_cpu.a: $(SKBB_OBJS)
 	ar -rc $@ $(SKBB_OBJS)
