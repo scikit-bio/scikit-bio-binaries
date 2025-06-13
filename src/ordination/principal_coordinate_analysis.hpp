@@ -19,13 +19,25 @@
 
 namespace skbb {
 
-// Note: Helper function
-// Center the matrix
-// mat and center must be nxn and symmetric
-// centered must be pre-allocated and same size as mat...will work even if centered==mat
-void mat_to_centered(const double mat[], const uint32_t n_samples, double centered[]);
-void mat_to_centered(const float  mat[], const uint32_t n_samples, float  centered[]);
-void mat_to_centered(const double mat[], const uint32_t n_samples, float  centered[]);
+/*
+ *  Centers a distance matrix.
+ *
+ *  Following computation as per
+ *  Numerical Ecology (Legendre & Legendre 1998).
+ *
+ *  Input parameters:
+ *   n_dims    - Size of the matrix
+ *   mat       - Distance matrix (n_dims x n_dims)
+ *
+ *  Output parameters:
+ *   centered  - Resulting matrix (n_dims x n_dims), pre-allocated
+ *
+ *   Note: mat and centered are allowed to point to the same memory area (e.g. in-place)
+ */
+
+void mat_to_centered(const uint32_t n_dims, const double mat[], double centered[]);
+void mat_to_centered(const uint32_t n_dims, const float  mat[], float  centered[]);
+void mat_to_centered(const uint32_t n_dims, const double mat[], float  centered[]);
 
 // Note: Helper function
 // Find eigen values and vectors
@@ -71,13 +83,6 @@ void find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, float  ce
  *                          The index corresponds to the ordination axis labels.
 */
 
-// Perform Principal Coordinate Analysis using FSVD method
-// n_samples - in, size of the matrix (n x n)
-// mat       - in, 
-// n_dims    - in, Dimensions to reduce the distance matrix to. This number determines how many eigenvectors and eigenvalues will be returned.
-// eigenvalues - out, alocated buffer of size n_dims
-// samples     - out, alocated buffer of size n_dims x n_samples
-// proportion_explained - out, allocated buffer of size n_dims
 void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained);
 void pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);
 void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained);

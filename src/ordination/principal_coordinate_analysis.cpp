@@ -30,7 +30,8 @@
 // centered must be pre-allocated and same size as mat (n_samples*n_samples)...will work even if centered==mat
 // row_means must be pre-allocated and n_samples in size
 template<class TRealIn, class TReal>
-inline void E_matrix_means(const TRealIn mat[], const uint32_t n_samples,               // IN
+static inline void E_matrix_means(const uint32_t n_dims,                                // IN
+                           const TRealIn mat[],                                         // IN
                            TReal centered[], TReal row_means[], TReal &global_mean) {   // OUT
   /*
     Compute E matrix from a distance matrix and store in temp centered matrix.
@@ -44,9 +45,9 @@ inline void E_matrix_means(const TRealIn mat[], const uint32_t n_samples,       
   TReal global_sum = 0.0;
 
 #pragma omp parallel for shared(mat,centered,row_means) reduction(+: global_sum)
-  for (uint32_t row=0; row<n_samples; row++) {
-    const TRealIn * mat_row = mat + uint64_t(n_samples)*row;
-    TReal         * centered_row = centered + uint64_t(n_samples)*row;
+  for (uint32_t row=0; row<n_dims; row++) {
+    const TRealIn * mat_row = mat + uint64_t(n_dims)*row;
+    TReal         * centered_row = centered + uint64_t(n_dims)*row;
 
     TReal row_sum = 0.0;
 
@@ -55,7 +56,7 @@ inline void E_matrix_means(const TRealIn mat[], const uint32_t n_samples,       
 
 #ifdef __AVX2__
     // group many together when HW supports vecotrization
-    for (; (col+7)<n_samples; col+=8) {
+    for (; (col+7)<n_dims; col+=8) {
        TReal el0 = mat_row[col  ];
        TReal el1 = mat_row[col+1];
        TReal el2 = mat_row[col+2];
@@ -88,7 +89,7 @@ inline void E_matrix_means(const TRealIn mat[], const uint32_t n_samples,       
 #else
 
 #ifdef __AVX__
-    for (; (col+3)<n_samples; col+=4) {
+    for (; (col+3)<n_dims; col+=4) {
        TReal el0 = mat_row[col  ];
        TReal el1 = mat_row[col+1];
        TReal el2 = mat_row[col+2];
@@ -112,7 +113,7 @@ inline void E_matrix_means(const TRealIn mat[], const uint32_t n_samples,       
 #endif
 
     // in case there are any leftovers
-    for (; col<n_samples; col++) {
+    for (; col<n_dims; col++) {
        TReal el0 = mat_row[col  ];
        el0 =  mhalf*el0*el0;
        centered_row[col  ] = el0;
@@ -120,15 +121,15 @@ inline void E_matrix_means(const TRealIn mat[], const uint32_t n_samples,       
     }
 
     global_sum += row_sum;
-    row_means[row] = row_sum/n_samples;
+    row_means[row] = row_sum/n_dims;
   }
 
-  global_mean = (global_sum/n_samples)/n_samples;
+  global_mean = (global_sum/n_dims)/n_dims;
 }
 
 // centered must be pre-allocated and same size as mat
 template<class TReal>
-inline void F_matrix_inplace(const TReal * __restrict__ row_means, const TReal global_mean, TReal * __restrict__ centered, const uint32_t n_samples) {
+static inline void F_matrix_inplace(const TReal * __restrict__ row_means, const TReal global_mean, TReal * __restrict__ centered, const uint32_t n_dims) {
   /*
     Compute F matrix from E matrix.
 
@@ -144,14 +145,14 @@ inline void F_matrix_inplace(const TReal * __restrict__ row_means, const TReal g
 
   // use a tiled pattern to maximize locality of row_means
 #pragma omp parallel for shared(centered,row_means)
-  for (uint32_t trow=0; trow<n_samples; trow+=512) {
-    uint32_t trow_max = std::min(trow+512, n_samples);
+  for (uint32_t trow=0; trow<n_dims; trow+=512) {
+    uint32_t trow_max = std::min(trow+512, n_dims);
 
-    for (uint32_t tcol=0; tcol<n_samples; tcol+=512) {
-      uint32_t tcol_max = std::min(tcol+512, n_samples);
+    for (uint32_t tcol=0; tcol<n_dims; tcol+=512) {
+      uint32_t tcol_max = std::min(tcol+512, n_dims);
 
       for (uint32_t row=trow; row<trow_max; row++) {
-        TReal *  __restrict__ centered_row = centered + uint64_t(n_samples)*row;
+        TReal *  __restrict__ centered_row = centered + uint64_t(n_dims)*row;
         const TReal gr_mean = global_mean - row_means[row];
 
         for (uint32_t col=tcol; col<tcol_max; col++) {
@@ -167,25 +168,25 @@ inline void F_matrix_inplace(const TReal * __restrict__ row_means, const TReal g
 // mat and center must be nxn and symmetric
 // centered must be pre-allocated and same size as mat...will work even if centered==mat
 template<class TRealIn, class TReal>
-inline void mat_to_centered_T(const TRealIn mat[], const uint32_t n_samples, TReal centered[]) {
+static inline void mat_to_centered_T(const uint32_t n_dims, const TRealIn mat[], TReal centered[]) {
 
    TReal global_mean;
-   TReal *row_means = (TReal *) malloc(uint64_t(n_samples)*sizeof(TReal));
-   E_matrix_means(mat, n_samples, centered, row_means, global_mean);
-   F_matrix_inplace(row_means, global_mean, centered, n_samples);
+   TReal *row_means = (TReal *) malloc(uint64_t(n_dims)*sizeof(TReal));
+   E_matrix_means(n_dims, mat, centered, row_means, global_mean);
+   F_matrix_inplace(row_means, global_mean, centered, n_dims);
    free(row_means);
 }
 
-void skbb::mat_to_centered(const double mat[], const uint32_t n_samples, double centered[]) {
-  mat_to_centered_T(mat,n_samples,centered);
+void skbb::mat_to_centered(const uint32_t n_dims, const double mat[], double centered[]) {
+  mat_to_centered_T(n_dims, mat, centered);
 }
 
-void skbb::mat_to_centered(const float  mat[], const uint32_t n_samples, float  centered[]) {
-  mat_to_centered_T(mat,n_samples,centered);
+void skbb::mat_to_centered(const uint32_t n_dims, const float  mat[], float  centered[]) {
+  mat_to_centered_T(n_dims, mat, centered);
 }
 
-void skbb::mat_to_centered(const double mat[], const uint32_t n_samples, float  centered[]) {
-  mat_to_centered_T(mat,n_samples,centered);
+void skbb::mat_to_centered(const uint32_t n_dims, const double mat[], float  centered[]) {
+  mat_to_centered_T(n_dims, mat, centered);
 }
 
 // Matrix dot multiplication
@@ -516,41 +517,45 @@ public:
 }
 
 /*
-    Perform Principal Coordinate Analysis.
-
-    Principal Coordinate Analysis (PCoA) is a method similar
-    to Principal Components Analysis (PCA) with the difference that PCoA
-    operates on distance matrices, typically with non-euclidian and thus
-    ecologically meaningful distances like UniFrac in microbiome research.
-
-    In ecology, the euclidean distance preserved by Principal
-    Component Analysis (PCA) is often not a good choice because it
-    deals poorly with double zeros (Species have unimodal
-    distributions along environmental gradients, so if a species is
-    absent from two sites at the same site, it can't be known if an
-    environmental variable is too high in one of them and too low in
-    the other, or too low in both, etc. On the other hand, if an
-    species is present in two sites, that means that the sites are
-    similar.).
-
-    Implemented using FSVD method.
-
-    Note that the returned eigenvectors are not normalized to unit length.
+ *  Perform Principal Coordinate Analysis.
+ *
+ *  Principal Coordinate Analysis (PCoA) is a method similar
+ *  to Principal Components Analysis (PCA) with the difference that PCoA
+ *  operates on distance matrices, typically with non-euclidian and thus
+ *  ecologically meaningful distances like UniFrac in microbiome research.
+ *
+ *  In ecology, the euclidean distance preserved by Principal
+ *  Component Analysis (PCA) is often not a good choice because it
+ *  deals poorly with double zeros (Species have unimodal
+ *  distributions along environmental gradients, so if a species is
+ *  absent from two sites at the same site, it can't be known if an
+ *  environmental variable is too high in one of them and too low in
+ *  the other, or too low in both, etc. On the other hand, if an
+ *  species is present in two sites, that means that the sites are
+ *  similar.).
+ *
+ *  Implemented using FSVD method.
+ *
+ *  Note that the returned eigenvectors are not normalized to unit length.
+ *
+ *  Input parameters:
+ *   n_dims    - Size of the matrix
+ *   mat       - Distance matrix (n_dims x n_dims)
+ *   center_obj- Buffer holding the centered matrix buffer (n_dims x n_dims)
+ *   n_eighs   - Number of eigenvalues to return
+ *
+ *  Output parameters: (returns a new buffer, must be released by caller)
+ *   eigenvalues          - Array of size n_eighs
+ *   samples              - The position of the samples in the ordination space,
+ *                          row-indexed by the sample id.
+ *                          Matrix of size (n_eighs x n_dims)
+ *   proportion_explained - Array of size n_eighs.
+ *                          The index corresponds to the ordination axis labels.
 */
 
-// mat       - in, result of unifrac compute
-// inplace   - in, if true, use mat as a work buffer 
-// n_samples - in, size of the matrix (n x n)
-// n_dims    - in, Dimensions to reduce the distance matrix to. This number determines how many eigenvectors and eigenvalues will be returned.
-// eigenvalues - out, alocated buffer of size n_dims
-// samples     - out, alocated buffer of size n_dims x n_samples
-// proportion_explained - out, allocated buffer of size n_dims
-
-// Note: Using (n_samples, n_dims) instead of (n_dims, n_eighs) for historical reasons, should be changed
-
 template<class TRealIn, class TReal, class TCenter>
-inline void pcoa_T(TRealIn mat[], TCenter &center_obj, const uint32_t n_samples, const uint32_t n_dims, TReal * &eigenvalues, TReal * &samples,TReal * &proportion_explained) {
-  proportion_explained = (TReal *) malloc(sizeof(TReal)*n_dims);
+static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_obj, const uint32_t n_eighs, TReal * &eigenvalues, TReal * &samples,TReal * &proportion_explained) {
+  proportion_explained = (TReal *) malloc(sizeof(TReal)*n_eighs);
 
   TReal diag_sum = 0.0;
   TReal *eigenvectors = NULL;
@@ -559,17 +564,17 @@ inline void pcoa_T(TRealIn mat[], TCenter &center_obj, const uint32_t n_samples,
     TReal *centered = center_obj.get_buf();
 
     // First must center the matrix
-    mat_to_centered_T<TRealIn,TReal>(mat,n_samples,centered);
+    mat_to_centered_T<TRealIn,TReal>(n_dims, mat, centered);
 
     // get the sum of the diagonal, needed later
     // and centered will be updated in-place in find_eigen
-    for (uint32_t i=0; i<n_samples; i++) diag_sum += centered[i*uint64_t(n_samples)+i];
+    for (uint32_t i=0; i<n_dims; i++) diag_sum += centered[i*uint64_t(n_dims)+i];
 
     // Find eigenvalues and eigenvectors
     // Use the Fast method... will return the allocated buffers
     eigenvalues = NULL;
     eigenvectors = NULL;
-    find_eigens_fast_T<TReal>(n_samples,n_dims,centered,eigenvalues,eigenvectors);
+    find_eigens_fast_T<TReal>(n_dims,n_eighs,centered,eigenvalues,eigenvectors);
 
     center_obj.release_buf();
   }
@@ -591,20 +596,20 @@ inline void pcoa_T(TRealIn mat[], TCenter &center_obj, const uint32_t n_samples,
   // use proportion_explained as tmp buffer here
   {
     TReal *sqvals = proportion_explained;
-    for (uint32_t i=0; i<n_dims; i++) sqvals[i]= sqrt(eigenvalues[i]);
+    for (uint32_t i=0; i<n_eighs; i++) sqvals[i]= sqrt(eigenvalues[i]);
 
     // we will  just update in place and pass out
     samples = eigenvectors;
 
 #pragma omp parallel for default(shared)
-    for (uint32_t row=0; row<n_samples; row++) {
-      TReal *prow = samples+(row*uint64_t(n_dims));
-      for (uint32_t i=0; i<n_dims; i++) prow[i] *= sqvals[i];
+    for (uint32_t row=0; row<n_dims; row++) {
+      TReal *prow = samples+(row*uint64_t(n_eighs));
+      for (uint32_t i=0; i<n_eighs; i++) prow[i] *= sqvals[i];
     }
   }
 
   // now compute the real proportion_explained
-  for (uint32_t i=0; i<n_dims; i++) proportion_explained[i] = eigenvalues[i]/diag_sum;
+  for (uint32_t i=0; i<n_eighs; i++) proportion_explained[i] = eigenvalues[i]/diag_sum;
 
 }
 
@@ -614,26 +619,26 @@ inline void pcoa_T(TRealIn mat[], TCenter &center_obj, const uint32_t n_samples,
 
 void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained) {
   skbb::NewCentered<double> cobj(n_dims);
-  pcoa_T(mat, cobj , n_dims, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
 void skbb::pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::NewCentered<float> cobj(n_dims);
-  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
 void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::NewCentered<float> cobj(n_dims);
-  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
 void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double * &eigenvalues, double * &samples, double * &proportion_explained) {
   skbb::InPlaceCentered<double> cobj(mat);
-  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 
 void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::InPlaceCentered<float> cobj(mat);
-  pcoa_T(mat, cobj, n_dims, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
 }
 

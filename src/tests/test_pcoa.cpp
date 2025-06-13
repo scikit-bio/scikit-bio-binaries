@@ -33,10 +33,11 @@ void test_center_mat() {
                     -0.00495654, -0.04973167, -0.17044974,  0.11192366,  0.18664966,-0.07343537,
                      0.01995843, -0.00537226,  0.02497543,  0.00739418, -0.07343537, 0.02647959 };
 
+    // fp64
     {
       double *centered = (double *) malloc(6*6*sizeof(double)); 
 
-      skbb::mat_to_centered(matrix, n_samples, centered);
+      skbb::mat_to_centered(n_samples, matrix, centered);
 
       for(int i = 0; i < (6*6); i++) {
         //printf("%i %f %f\n",i,float(centered[i]),float(exp[i]));
@@ -46,14 +47,11 @@ void test_center_mat() {
       free(centered);
     }
 
-    float *matrix_fp32 = (float *) malloc(6*6*sizeof(float));
-    for(int i = 0; i < (6*6); i++) matrix_fp32[i] = matrix[i];
-
-
+    // mixed
     {
       float *centered_fp32 = (float *) malloc(6*6*sizeof(float));
 
-      skbb::mat_to_centered(matrix_fp32, n_samples, centered_fp32);
+      skbb::mat_to_centered(n_samples, matrix, centered_fp32);
 
       for(int i = 0; i < (6*6); i++) {
         //printf("%i %f %f\n",i,float(centered_fp32[i]),float(exp[i]));
@@ -63,9 +61,46 @@ void test_center_mat() {
       free(centered_fp32);
     }
 
+    float *matrix_fp32 = (float *) malloc(6*6*sizeof(float));
+    for(int i = 0; i < (6*6); i++) matrix_fp32[i] = matrix[i];
+
+
+    // fp32
+    {
+      float *centered_fp32 = (float *) malloc(6*6*sizeof(float));
+
+      skbb::mat_to_centered(n_samples, matrix_fp32, centered_fp32);
+
+      for(int i = 0; i < (6*6); i++) {
+        //printf("%i %f %f\n",i,float(centered_fp32[i]),float(exp[i]));
+        ASSERT(fabs(centered_fp32[i] - exp[i]) < 0.000001);
+      }
+
+      free(centered_fp32);
+    }
+
+    // fp32 in-place
+    {
+      skbb::mat_to_centered(n_samples, matrix_fp32, matrix_fp32);
+
+      for(int i = 0; i < (6*6); i++) {
+        //printf("%i %f %f\n",i,float(matrix_fp32[i]),float(exp[i]));
+        ASSERT(fabs(matrix_fp32[i] - exp[i]) < 0.000001);
+      }
+    }
+
     free(matrix_fp32);
 
 
+    // fp64 in-place
+    {
+      skbb::mat_to_centered(n_samples, matrix, matrix);
+
+      for(int i = 0; i < (6*6); i++) {
+        //printf("%i %f %f\n",i,float(matrix_fp32[i]),float(exp[i]));
+        ASSERT(fabs(matrix[i] - exp[i]) < 0.000001);
+      }
+    }
     SUITE_END();
 }
 
@@ -120,7 +155,7 @@ void test_pcoa_fsvd() {
 
     double *centered = (double *) malloc(9*9*sizeof(double));
 
-    skbb::mat_to_centered(matrix, n_samples, centered);
+    skbb::mat_to_centered(n_samples, matrix, centered);
 
     for(int i = 0; i < (9*9); i++) {
       //printf("%i %f %f\n",i,float(centered[i]),float(exp[i]));
