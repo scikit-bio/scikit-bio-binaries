@@ -384,12 +384,25 @@ inline void transpose_T(const uint64_t rows, const uint64_t cols, const TReal in
        out[i*cols+j] = in[i + j*rows];
 }
 
-
-// Based on N. Halko, P.G. Martinsson, Y. Shkolnisky, and M. Tygert.
-//     Original Paper: https://arxiv.org/abs/1007.5510
-// centered == n x n, must be symmetric, Note: will be used in-place as temp buffer
+/*
+ * Performs singular value decomposition, or more specifically in
+ * this case eigendecomposition, using fast heuristic algorithm
+ * nicknamed "FSVD" (FastSVD), adapted and optimized from the algorithm
+ * described by Halko et al (2011).
+ *   N. Halko, P.G. Martinsson, Y. Shkolnisky, and M. Tygert.
+ *  Original Paper: https://arxiv.org/abs/1007.5510
+ *
+ *  Input parameters:
+ *   n_dims    - Size of the matrix
+ *   centered  - Centered distance matrix (n_dims x n_dims), will be overwritten during compute
+ *   n_eighs   - Number of eigenvalues to return
+ *
+ *  Output parameters:
+ *   eigenvalues          - Array of size n_eighs, pre-allocated
+ *   eigenvectors         - Matrix of size (n_dims x n_eighs), pre-allocated
+ */
 template<class TReal>
-inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const uint32_t n_eighs, TReal * &eigenvalues, TReal * &eigenvectors) {
+inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const uint32_t n_eighs, TReal eigenvalues[], TReal eigenvectors[]) {
   const uint32_t k = n_eighs+2;
 
   int rc;
@@ -442,25 +455,22 @@ inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const ui
 
   // step 6
   // get the interesting subset, and return
-  
-  // simply truncate the values, since it is a vector
-  eigenvalues  = (TReal *) realloc(S, sizeof(TReal)*n_eighs);
+ 
+  for (uint32_t i=0; i<n_eighs; i++) eigenvalues[i] = S[i];
+  free(S); 
 
   // *eigenvectors = U = Vt
   // use only the truncated part of W, then transpose
-  TReal *U = (TReal *) malloc(uint64_t(n_dims)*uint64_t(n_eighs)*sizeof(TReal));
-
-  transpose_T<TReal>(n_dims, n_eighs, Ut, U);
-  eigenvectors = U;
+  transpose_T<TReal>(n_dims, n_eighs, Ut, eigenvectors);
 
   free(Ut);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double * &eigenvalues, double * &eigenvectors) {
+void skbb::find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double eigenvalues[], double eigenvectors[]) {
   find_eigens_fast_T<double>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_dims, float centered[], const uint32_t n_eighs, float * &eigenvalues, float * &eigenvectors) {
+void skbb::find_eigens_fast(const uint32_t n_dims, float centered[], const uint32_t n_eighs, float eigenvalues[], float eigenvectors[]) {
   find_eigens_fast_T<float>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
 }
 
@@ -572,8 +582,8 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
 
     // Find eigenvalues and eigenvectors
     // Use the Fast method... will return the allocated buffers
-    eigenvalues = NULL;
-    eigenvectors = NULL;
+    eigenvalues = (TReal *) malloc(uint64_t(n_eighs)*sizeof(TReal));
+    eigenvectors = (TReal *) malloc(uint64_t(n_dims)*uint64_t(n_eighs)*sizeof(TReal));
     find_eigens_fast_T<TReal>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
 
     center_obj.release_buf();

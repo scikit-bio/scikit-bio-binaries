@@ -185,8 +185,8 @@ void test_pcoa_fsvd() {
         0.52356078, -0.0693768 , -0.30890127, -0.26195855, -0.23971493};
 
     {
-      double *eigenvalues;
-      double *eigenvectors;
+      double eigenvalues[5];
+      double eigenvectors[5*9];
       skbb::find_eigens_fast(n_samples, centered, 5, eigenvalues, eigenvectors);
 
       for(int i = 0; i < 5; i++) {
@@ -200,12 +200,10 @@ void test_pcoa_fsvd() {
         ASSERT( fabs(fabs(eigenvectors[i]) - fabs(exp3b[i])) < 0.00001);
       }
     
-      free(eigenvectors);
-      free(eigenvalues);
     }
     {
-      float *eigenvalues;
-      float *eigenvectors;
+      float eigenvalues[5];
+      float eigenvectors[5*9];
       skbb::find_eigens_fast(n_samples, centered_fp32, 5, eigenvalues, eigenvectors);
 
       for(int i = 0; i < 5; i++) {
@@ -219,8 +217,6 @@ void test_pcoa_fsvd() {
         ASSERT( fabs(fabs(eigenvectors[i]) - fabs(exp3b[i])) < 0.00001);
       }
     
-      free(eigenvectors);
-      free(eigenvalues);
     }
 
     free(centered_fp32);

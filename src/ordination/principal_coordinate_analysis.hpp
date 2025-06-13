@@ -52,12 +52,12 @@ void mat_to_centered(const uint32_t n_dims, const double mat[], float  centered[
  *   centered  - Centered distance matrix (n_dims x n_dims), will be overwritten during compute
  *   n_eighs   - Number of eigenvalues to return
  *
- *  Output parameters: (returns a new buffer, must be released by caller)
- *   eigenvalues          - Array of size n_eighs
- *   eigenvectors         - Array of size n_eighs
+ *  Output parameters:
+ *   eigenvalues          - Array of size n_eighs, pre-allocated
+ *   eigenvectors         - Matrix of size (n_dims x n_eighs), pre-allocated
  */
-void find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double * &eigenvalues, double * &eigenvectors);
-void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n_eighs, float  * &eigenvalues, float  * &eigenvectors);
+void find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double eigenvalues[], double eigenvectors[]);
+void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n_eighs, float  eigenvalues[], float  eigenvectors[]);
 
 /*
  *  Perform Principal Coordinate Analysis.
