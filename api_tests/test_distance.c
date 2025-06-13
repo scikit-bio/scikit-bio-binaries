@@ -13,13 +13,16 @@
 #include <math.h>
 #include <stdbool.h>
 
+int global_failed = false;
 int failed = false;
 
 #define ASSERT(x) {if(!(x)) \
     { fprintf(stderr, "failed assert [%s:%i]\n", __FILE__, __LINE__); \
-      failed = true; }}
+      failed = true; global_failed = true;}}
 
 void test_permanova_ties() {
+    failed = false;
+
     // Same as tests in src/tests
     const double matrix_fp64[] = { 
       0., 1., 1., 4.,
@@ -70,17 +73,22 @@ void test_permanova_ties() {
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
+    if (global_failed) {
+      printf("ERROR: Permanova test failed\n");
+    } else {
+      printf("INFO: Permanova test succeeded\n");
+    }
 }
 
 int main(int argc, char** argv) {
-    failed = false;
+    global_failed = false;
     test_permanova_ties();
 
     printf("\n");
-    if (failed) {
-      printf("ERROR: Test failed\n");
+    if (global_failed) {
+      printf("ERROR: Some distance tests failed\n");
     } else {
-      printf("INFO: Test succeeded\n");
+      printf("INFO: All distance tests succeeded\n");
     }
     
     return failed ? 1 : 0;
