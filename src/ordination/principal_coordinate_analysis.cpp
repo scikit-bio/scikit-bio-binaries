@@ -30,8 +30,8 @@
 // centered must be pre-allocated and same size as mat (n_samples*n_samples)...will work even if centered==mat
 // row_means must be pre-allocated and n_samples in size
 template<class TRealIn, class TReal>
-inline void E_matrix_means(const TRealIn * mat, const uint32_t n_samples,               // IN
-                           TReal * centered, TReal * row_means, TReal &global_mean) {   // OUT
+inline void E_matrix_means(const TRealIn mat[], const uint32_t n_samples,               // IN
+                           TReal centered[], TReal row_means[], TReal &global_mean) {   // OUT
   /*
     Compute E matrix from a distance matrix and store in temp centered matrix.
 
@@ -167,7 +167,7 @@ inline void F_matrix_inplace(const TReal * __restrict__ row_means, const TReal g
 // mat and center must be nxn and symmetric
 // centered must be pre-allocated and same size as mat...will work even if centered==mat
 template<class TRealIn, class TReal>
-inline void mat_to_centered_T(const TRealIn * mat, const uint32_t n_samples, TReal * centered) {
+inline void mat_to_centered_T(const TRealIn mat[], const uint32_t n_samples, TReal centered[]) {
 
    TReal global_mean;
    TReal *row_means = (TReal *) malloc(uint64_t(n_samples)*sizeof(TReal));
@@ -176,15 +176,15 @@ inline void mat_to_centered_T(const TRealIn * mat, const uint32_t n_samples, TRe
    free(row_means);
 }
 
-void skbb::mat_to_centered(const double * mat, const uint32_t n_samples, double * centered) {
+void skbb::mat_to_centered(const double mat[], const uint32_t n_samples, double centered[]) {
   mat_to_centered_T(mat,n_samples,centered);
 }
 
-void skbb::mat_to_centered(const float  * mat, const uint32_t n_samples, float  * centered) {
+void skbb::mat_to_centered(const float  mat[], const uint32_t n_samples, float  centered[]) {
   mat_to_centered_T(mat,n_samples,centered);
 }
 
-void skbb::mat_to_centered(const double * mat, const uint32_t n_samples, float  * centered) {
+void skbb::mat_to_centered(const double mat[], const uint32_t n_samples, float  centered[]) {
   mat_to_centered_T(mat,n_samples,centered);
 }
 
@@ -214,7 +214,7 @@ inline void mat_dot_T<float>(const float *mat, const float *other, const uint32_
 // centered == n x n
 // randomized = k*2 x n (ColOrder... n elements together)
 template<class TReal>
-inline void centered_randomize_T(const TReal * centered, const uint32_t n_samples, const uint32_t k, TReal * randomized) {
+inline void centered_randomize_T(const TReal centered[], const uint32_t n_samples, const uint32_t k, TReal randomized[]) {
   uint64_t matrix_els = uint64_t(n_samples)*uint64_t(k);
   TReal * tmp = (TReal *) malloc(matrix_els*sizeof(TReal));
 
@@ -364,7 +364,7 @@ inline int svd_it_T<float>(const uint32_t rows, const uint32_t cols, float *T, f
 
 // square matrix transpose, with org not alingned
 template<class TReal>
-inline void transpose_sq_st_T(const uint64_t n, const uint64_t stride, const TReal *in, TReal *out) {
+inline void transpose_sq_st_T(const uint64_t n, const uint64_t stride, const TReal in[], TReal out[]) {
   // n expected to be small, so simple single-thread perfect
   // org_n>=n guaranteed
   for (uint64_t i=0; i<n; i++)
@@ -376,7 +376,7 @@ inline void transpose_sq_st_T(const uint64_t n, const uint64_t stride, const TRe
 // in  is cols x rows
 // out is rows x cols
 template<class TReal>
-inline void transpose_T(const uint64_t rows, const uint64_t cols, const TReal *in, TReal *out) {
+inline void transpose_T(const uint64_t rows, const uint64_t cols, const TReal in[], TReal out[]) {
   // To be optimizedc
   for (uint64_t i=0; i<rows; i++)
     for (uint64_t j=0; j<cols; j++)
@@ -388,7 +388,7 @@ inline void transpose_T(const uint64_t rows, const uint64_t cols, const TReal *i
 //     Original Paper: https://arxiv.org/abs/1007.5510
 // centered == n x n, must be symmetric, Note: will be used in-place as temp buffer
 template<class TReal>
-inline void find_eigens_fast_T(const uint32_t n_samples, const uint32_t n_dims, TReal * centered, TReal * &eigenvalues, TReal * &eigenvectors) {
+inline void find_eigens_fast_T(const uint32_t n_samples, const uint32_t n_dims, TReal centered[], TReal * &eigenvalues, TReal * &eigenvectors) {
   const uint32_t k = n_dims+2;
 
   int rc;
@@ -455,11 +455,11 @@ inline void find_eigens_fast_T(const uint32_t n_samples, const uint32_t n_dims, 
   free(Ut);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, double * centered, double * &eigenvalues, double * &eigenvectors) {
+void skbb::find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, double centered[], double * &eigenvalues, double * &eigenvectors) {
   find_eigens_fast_T<double>(n_samples, n_dims, centered, eigenvalues, eigenvectors);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, float * centered, float * &eigenvalues, float * &eigenvectors) {
+void skbb::find_eigens_fast(const uint32_t n_samples, const uint32_t n_dims, float centered[], float * &eigenvalues, float * &eigenvectors) {
   find_eigens_fast_T<float>(n_samples, n_dims, centered, eigenvalues, eigenvectors);
 }
 
@@ -549,7 +549,7 @@ public:
 // proportion_explained - out, allocated buffer of size n_dims
 
 template<class TRealIn, class TReal, class TCenter>
-inline void pcoa_T(TRealIn * mat, TCenter &center_obj, const uint32_t n_samples, const uint32_t n_dims, TReal * &eigenvalues, TReal * &samples,TReal * &proportion_explained) {
+inline void pcoa_T(TRealIn mat[], TCenter &center_obj, const uint32_t n_samples, const uint32_t n_dims, TReal * &eigenvalues, TReal * &samples,TReal * &proportion_explained) {
   proportion_explained = (TReal *) malloc(sizeof(TReal)*n_dims);
 
   TReal diag_sum = 0.0;
@@ -612,28 +612,28 @@ inline void pcoa_T(TRealIn * mat, TCenter &center_obj, const uint32_t n_samples,
 // Main, external interfaces
 //
 
-void skbb::pcoa_fsvd(const double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+void skbb::pcoa_fsvd(const double mat[], const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
   skbb::NewCentered<double> cobj(n_samples, n_dims);
   pcoa_T(mat, cobj , n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd(const float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd(const float  mat[], const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::NewCentered<float> cobj(n_samples, n_dims);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
 // Note: tentatively deprecated
-void skbb::pcoa_fsvd(const double * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd(const double mat[], const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::NewCentered<float> cobj(n_samples, n_dims);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(double * mat, const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(double mat[], const uint32_t n_samples, const uint32_t n_dims, double * &eigenvalues, double * &samples, double * &proportion_explained) {
   skbb::InPlaceCentered<double> cobj(mat);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(float  * mat, const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
+void skbb::pcoa_fsvd_inplace(float  mat[], const uint32_t n_samples, const uint32_t n_dims, float  * &eigenvalues, float  * &samples, float  * &proportion_explained) {
   skbb::InPlaceCentered<float> cobj(mat);
   pcoa_T(mat, cobj, n_samples, n_dims, eigenvalues, samples, proportion_explained);
 }
