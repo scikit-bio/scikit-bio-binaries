@@ -47,8 +47,8 @@ namespace skbb {
  *   pvalue_out - p-value
  */
 
-void permanova(unsigned int n_dims, const double * mat, const uint32_t *grouping, unsigned int n_perm, double &fstat_out, double &pvalue_out);
-void permanova(unsigned int n_dims, const float  * mat, const uint32_t *grouping, unsigned int n_perm, float  &fstat_out, float  &pvalue_out);
+void permanova(unsigned int n_dims, const double mat[], const uint32_t grouping[], unsigned int n_perm, double &fstat_out, double &pvalue_out);
+void permanova(unsigned int n_dims, const float  mat[], const uint32_t grouping[], unsigned int n_perm, float  &fstat_out, float  &pvalue_out);
 
 }
 

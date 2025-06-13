@@ -56,10 +56,10 @@
 // Results in permutted_sWs, and array of size (n_perm+1)
 template<class TFloat>
 static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
-                                   const TFloat * mat,
-                                   const uint32_t *grouping, 
+                                   const TFloat mat[],
+                                   const uint32_t grouping[],
                                    uint32_t n_groups,
-                                   const uint32_t *group_sizes,
+                                   const uint32_t group_sizes[],
                                    const uint32_t n_perm,
                                    TFloat *permutted_sWs) {
 #if defined(SKBB_ENABLE_ACC_NV) || defined(SKBB_ENABLE_ACC_AMD)
@@ -187,7 +187,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
 
 // Compute the square sum of the upper triangle
 template<class TFloat>
-static inline TFloat sum_upper_square(const uint32_t n_dims, const TFloat * mat) {
+static inline TFloat sum_upper_square(const uint32_t n_dims, const TFloat mat[]) {
   // Use full precision for intermediate compute, to minimize accumulation errors
   double sum = 0.0;
   // not optimal parallelism, but this is cheap anyway
@@ -209,8 +209,8 @@ static inline TFloat sum_upper_square(const uint32_t n_dims, const TFloat * mat)
 // Results in permutted_fstats, and array of size (n_perm+1)
 template<class TFloat>
 static inline void permanova_all_T(const uint32_t n_dims,
-                            const TFloat * mat,
-                            const uint32_t *grouping, 
+                            const TFloat mat[],
+                            const uint32_t grouping[],
                             const uint32_t n_perm,
                             TFloat *permutted_fstats) {
   // first count the elements in the grouping
@@ -251,8 +251,8 @@ static inline void permanova_all_T(const uint32_t n_dims,
 // Results in permutted_fstats, and array of size (n_perm+1)
 template<class TFloat>
 static inline void permanova_T(const uint32_t n_dims,
-                        const TFloat * mat,
-                        const uint32_t *grouping, 
+                        const TFloat mat[],
+                        const uint32_t grouping[],
                         const uint32_t n_perm,
                         TFloat &fstat, TFloat &pvalue) {
   // First compute all the permutations
@@ -280,8 +280,8 @@ static inline void permanova_T(const uint32_t n_dims,
 //
 
 void skbb::permanova(unsigned int n_dims,
-                   const double * mat,
-                   const uint32_t *grouping,
+                   const double mat[],
+                   const uint32_t grouping[],
                    unsigned int n_perm,
                    double &fstat_out, double &pvalue_out) {
   permanova_T<double>(n_dims, mat, grouping, n_perm,
@@ -289,8 +289,8 @@ void skbb::permanova(unsigned int n_dims,
 }
 
 void skbb::permanova(unsigned int n_dims,
-                   const float * mat,
-                   const uint32_t *grouping,
+                   const float mat[],
+                   const uint32_t grouping[],
                    unsigned int n_perm,
                    float &fstat_out, float &pvalue_out) {
   permanova_T<float>(n_dims, mat, grouping, n_perm,
