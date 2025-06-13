@@ -46,12 +46,6 @@ clean:
 
 api: libskbb.so
 
-install:
-	mkdir -p "${PREFIX}/lib"
-	mkdir -p "${PREFIX}/include/scikit-bio-binaries"
-	rm -f "${PREFIX}/lib/libskbb.so"; cp "libskbb.so" "${PREFIX}/lib/"
-	rm -f "${PREFIX}/include/scikit-bio-binaries/distance.h"; cp extern/distance.h "${PREFIX}/include/scikit-bio-binaries/"
-
 ##
 # Utility/helper modules
 
@@ -206,16 +200,30 @@ ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_co
 
 ##
 
-skbb_extern.o: extern/skbb.cpp extern/distance.h
+SHBB_EXTERN_OBJS := skbb_extern_distance.o skbb_extern_ordination.o
+SHBB_EXTERN_HS := distance.h ordination.h
+
+skbb_extern_distance.o: extern/skbb_distance.cpp extern/distance.h distance/permanova.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+skbb_extern_ordination.o: extern/skbb_ordination.cpp extern/ordination.h ordination/principal_coordinate_analysis.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 ##
 
-libskbb.so: skbb_extern.o $(SKBB_OBJS)
-	$(CXX) $(SO_LDDFLAGS) -o $@ skbb_extern.o $(SKBB_OBJS) $(BLASLIB)
+libskbb.so: $(SHBB_EXTERN_OBJS) $(SKBB_OBJS)
+	$(CXX) $(SO_LDDFLAGS) -o $@ $(SHBB_EXTERN_OBJS) $(SKBB_OBJS) $(BLASLIB)
 
 libskbb_cpu.a: $(SKBB_OBJS)
 	ar -rc $@ $(SKBB_OBJS)
+
+##
+
+install:
+	mkdir -p "${PREFIX}/lib"
+	mkdir -p "${PREFIX}/include/scikit-bio-binaries"
+	rm -f "${PREFIX}/lib/libskbb.so"; cp "libskbb.so" "${PREFIX}/lib/"
+	for f in $(SHBB_EXTERN_HS); do rm -f "${PREFIX}/include/scikit-bio-binaries/$${f}"; cp "extern/$${f}" "${PREFIX}/include/scikit-bio-binaries/"; done
 
 ##
 

@@ -1,11 +1,17 @@
 .PHONY: test_binaries test
 
-test: test_distance.exe
-	./test_distance.exe
+SKBB_TESTS := test_distance.exe test_ordination.exe
 
-test_binaries: test_distance.exe
+test: $(SKBB_TESTS)
+	./test_distance.exe
+	./test_ordination.exe
+
+test_binaries: (SKBB_TESTS)
 
 test_distance.exe: test_distance.c
+	$(CC) $(CFLAGS) -std=c99 -O0 -g $< $(LDFLAGS) -lskbb -o $@
+
+test_ordination.exe: test_ordination.c
 	$(CC) $(CFLAGS) -std=c99 -O0 -g $< $(LDFLAGS) -lskbb -o $@
 
 clean:

@@ -73,7 +73,7 @@ void test_permanova_ties() {
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
-    if (global_failed) {
+    if (failed) {
       printf("ERROR: Permanova test failed\n");
     } else {
       printf("INFO: Permanova test succeeded\n");
