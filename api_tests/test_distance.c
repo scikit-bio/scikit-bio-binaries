@@ -8,6 +8,7 @@
  */
 
 #include "scikit-bio-binaries/distance.h"
+#include "scikit-bio-binaries/util.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <math.h>
@@ -82,6 +83,22 @@ void test_permanova_ties() {
 
 int main(int argc, char** argv) {
     global_failed = false;
+    test_permanova_ties();
+    {
+      failed = false;
+
+      printf("[INFO] Forcibly enable acc reporting, current flag: %i\n",(int)skbb_is_acc_reporting());
+      skbb_set_acc_reporting_flag(true);
+      ASSERT(skbb_is_acc_reporting());
+      printf("[INFO] Forcibly disable acc, current mode: %i\n",(int)skbb_get_acc_mode());
+      ASSERT(skbb_set_acc_mode(SKBB_ACC_CPU));
+      ASSERT(skbb_get_acc_mode()==0);
+      if (failed) {
+        printf("ERROR: Permanova test failed\n");
+      } else {
+        printf("INFO: Permanova test succeeded\n");
+      }
+    }
     test_permanova_ties();
 
     printf("\n");

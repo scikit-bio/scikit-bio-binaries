@@ -9,6 +9,7 @@
  */
 
 #include "distance/permanova.hpp"
+#include "util/skbb_detect_acc.hpp"
 #include <unistd.h>
 #include "tests/test_helper.hpp"
 
@@ -185,6 +186,22 @@ void test_permanova_unequal() {
 }
 
 int main(int argc, char** argv) {
+    test_permanova_ties();
+    test_permanova_noties();
+    test_permanova_unequal();
+
+    {
+      SUITE_START("test acc");
+
+      printf("[INFO] Forcibly enable acc reporting, current flag: %i\n",int(skbb::check_report_acc()));
+      skbb::set_report_acc(true);
+      ASSERT(skbb::check_report_acc());
+      printf("[INFO] Forcibly disable acc, current mode: %i\n",int(skbb::check_use_acc()));
+      ASSERT(skbb::set_use_acc(skbb::ACC_CPU));
+      ASSERT(skbb::check_use_acc()==0);
+      SUITE_END();
+    }
+
     test_permanova_ties();
     test_permanova_noties();
     test_permanova_unequal();

@@ -9,6 +9,7 @@
  */
 
 #include "ordination/principal_coordinate_analysis.hpp"
+#include "util/rand.hpp"
 #include <unistd.h>
 #include "tests/test_helper.hpp"
 
@@ -377,6 +378,7 @@ void test_pcoa_fsvd() {
 
 int main(int argc, char** argv) {
     test_center_mat();
+    skbb::set_random_seed(33); // no test, but exercise util/rand
     test_pcoa_fsvd();
 
     printf("\n");

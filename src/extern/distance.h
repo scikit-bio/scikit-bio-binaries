@@ -11,7 +11,6 @@
 #define SKBB_EXTERN_DISTANCE_H
 
 #ifdef __cplusplus
-#include <vector>
 #define EXTERN extern "C"
 #else
 #define EXTERN

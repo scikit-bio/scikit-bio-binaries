@@ -52,14 +52,10 @@ SKBB_OBJS := util_rand.o
 util_rand.o: util/rand.cpp util/rand.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-ifndef NOGPU
-
 SKBB_OBJS += skbb_detect_acc.o
 
 skbb_detect_acc.o: util/skbb_detect_acc.cpp util/skbb_detect_acc.hpp util/skbb_accapi.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-endif
 
 ##
 # skbb_accapi dynamic code wrappers generation
@@ -198,8 +194,11 @@ ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_co
 
 ##
 
-SHBB_EXTERN_OBJS := skbb_extern_distance.o skbb_extern_ordination.o
-SHBB_EXTERN_HS := distance.h ordination.h
+SHBB_EXTERN_OBJS := skbb_extern_distance.o skbb_extern_ordination.o skbb_extern_util.o
+SHBB_EXTERN_HS := distance.h ordination.h util.h
+
+skbb_extern_util.o: extern/skbb_util.cpp extern/util.h util/rand.hpp util/skbb_detect_acc.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 skbb_extern_distance.o: extern/skbb_distance.cpp extern/distance.h distance/permanova.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@

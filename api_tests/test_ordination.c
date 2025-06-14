@@ -8,6 +8,7 @@
  */
 
 #include "scikit-bio-binaries/ordination.h"
+#include "scikit-bio-binaries/util.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -413,6 +414,7 @@ void test_pcoa_fsvd() {
 int main(int argc, char** argv) {
     global_failed = false;
     test_center_mat();
+    skbb_set_random_seed(33); // no test, just exercising util.h
     test_pcoa_fsvd();
 
     printf("\n");
