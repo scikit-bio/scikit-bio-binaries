@@ -5,7 +5,7 @@
    :target: https://scikit.bio
    :alt: scikit-bio logo
 
-*scikit-bio-binaries is an open-source, BSD-licensed package providing optimized algorithms for bioinformatics in support of ``scikit-bio`` (`<https://scikit.bio>`_).*
+*scikit-bio-binaries is an open-source, BSD-licensed package providing optimized algorithms for bioinformatics in support of scikit-bio (`<https://scikit.bio>`_).*
 
 
 Releases
