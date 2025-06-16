@@ -1,0 +1,64 @@
+name: skbb CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build-and-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-13, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniconda-version: "latest"
+        auto-update-conda: true
+    - name: Build
+      shell: bash -l {0}
+      run: |
+        df -h .
+        if [[ "$(uname -s)" == "Linux" ]];
+        then
+          conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda gxx_linux-64 gfortran_linux-64
+        else
+         if [[ "x`conda info |awk '/platform/{print $3}'`" == "xosx-64" ]];
+         then
+          conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda clangxx_osx-64
+         else
+          conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda clangxx_osx-arm64
+         fi
+        fi 
+        conda activate skbb-build
+        conda install --yes --strict-channel-priority -c conda-forge libcblas liblapacke blas-devel make
+        conda clean --yes -t
+        df -h .
+        echo "$(uname -s)"
+        $CXX --version
+        $CC --version
+        export PERFORMING_CONDA_BUILD=True
+        echo "======= begin env ====="
+        env
+        echo "=======  end env  ====="
+        # all == build (shlib,bins,tests) and install
+        make clean && make clean_install && make all
+        df -h .
+    - name: Test
+      shell: bash -l {0}
+      run: |
+        conda activate skbb-build
+        if [[ "$(uname -s)" == "Linux" ]];
+        then
+           lscpu
+        fi
+        # keep it low for runs in containers
+        # and a weird number to potentially catch potential bugs
+        export OMP_NUM_THREADS=3
+        make test
