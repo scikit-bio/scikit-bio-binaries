@@ -32,7 +32,6 @@ ifeq ($(PLATFORM),Darwin)
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/libskbb.so
 else
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -shared
-        BLASLIB += -lgfortran -lquadmath
 endif
 
 CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC

@@ -29,7 +29,7 @@ jobs:
         echo "Conda platform: ${cplatform}"
         if [[ "$(uname -s)" == "Linux" ]];
         then
-          conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda gxx_${cplatform} gfortran_${cplatform}
+          conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda gxx_${cplatform}
         else
           conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda clangxx_${cplatform}
         fi 
