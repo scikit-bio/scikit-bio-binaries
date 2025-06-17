@@ -29,9 +29,33 @@
 /* ====================================================== */
 
 /*
+ * Version of the API this header refers to.
+ *
+ * Note to developers:
+ * Increase the number every time there is a change in the API.
+ *
+ */
+#define SKBB_API_CURRENT_VERSION 1
+
+/*
+ * All other functions have a min API constant defined
+ * When supporting flexible dependencies,
+ * use them to determine if the a fuction
+ * has its implementation in the shared library in use
+ */
+
+
+/* What API version is the shared library providing */
+EXTERN unsigned int skbb_get_api_version();
+
+/* ====================================================== */
+
+/*
  * Set random seed used by any and all the functions
  * in this library
  */
+
+#define SKBB_RANDOM_API_MIN_VERSION 1
 
 EXTERN void skbb_set_random_seed(unsigned int new_seed);
 
@@ -55,6 +79,7 @@ EXTERN void skbb_set_random_seed(unsigned int new_seed);
  * check what auto-detection discovered
  * and force a different outcome.
  */
+#define SKBB_ACC_API_MIN_VERSION 1
 
 /* no acceleration, always possible */
 #define SKBB_ACC_CPU 0

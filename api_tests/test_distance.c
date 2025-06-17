@@ -83,6 +83,15 @@ void test_permanova_ties() {
 
 int main(int argc, char** argv) {
     global_failed = false;
+    {
+      failed = false;
+
+      /* we are assuming we are testing our own build */
+      ASSERT(skbb_get_api_version()==SKBB_API_CURRENT_VERSION);
+      if (failed) {
+        printf("ERROR: Version check failed\n");
+      }
+    }
     test_permanova_ties();
     {
       failed = false;

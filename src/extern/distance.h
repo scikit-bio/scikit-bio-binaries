@@ -53,6 +53,8 @@
  *   pvalue_ptr - p-value
  */
 
+#define SKBB_PERMANOVA_API_MIN_VERSION 1
+
 EXTERN void skbb_permanova_fp64(unsigned int n_dims, const double mat[], const unsigned int grouping[], unsigned int n_perm, double *fstat_ptr, double *pvalue_ptr);
 
 EXTERN void skbb_permanova_fp32(unsigned int n_dims, const float  mat[], const unsigned int grouping[], unsigned int n_perm, float  *fstat_ptr, float  *pvalue_ptr);

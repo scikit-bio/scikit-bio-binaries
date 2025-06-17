@@ -40,6 +40,7 @@
  *
  *   Note: mat and centered are allowed to point to the same memory area (e.g. in-place)
  */
+#define SKBB_CDM_API_MIN_VERSION 1
 
 EXTERN void skbb_center_distance_matrix_fp64(unsigned int n_dims, const double mat[], double centered[]);
 EXTERN void skbb_center_distance_matrix_fp32(unsigned int n_dims, const float  mat[], float  centered[]);
@@ -62,6 +63,8 @@ EXTERN void skbb_center_distance_matrix_fp64_to_fp32(unsigned int n_dims, const 
  *   eigenvalues          - Array of size n_eighs, pre-allocated
  *   eigenvectors         - Matrix of size (n_dims x n_eighs), pre-allocated
  */
+#define SKBB_FSVD_API_MIN_VERSION 1
+
 EXTERN void skbb_fsvd_inplace_fp64(unsigned int n_dims, double centered[], unsigned int n_eighs, double eigenvalues[], double eigenvectors[]);
 EXTERN void skbb_fsvd_inplace_fp32(unsigned int n_dims, float  centered[], unsigned int n_eighs, float  eigenvalues[], float  eigenvectors[]);
 
@@ -100,6 +103,8 @@ EXTERN void skbb_fsvd_inplace_fp32(unsigned int n_dims, float  centered[], unsig
  *   proportion_explained - Array of size n_eighs, pre-allocated
  *                          The index corresponds to the ordination axis labels.
 */
+
+#define SKBB_PCOA_FSVD_API_MIN_VERSION 1
 
 EXTERN void skbb_pcoa_fsvd_fp64(unsigned int n_dims, const double mat[], unsigned int n_eighs, double eigenvalues[], double samples[], double proportion_explained[]);
 EXTERN void skbb_pcoa_fsvd_fp32(unsigned int n_dims, const float  mat[], unsigned int n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);

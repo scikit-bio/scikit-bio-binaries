@@ -12,6 +12,10 @@
 #include "util/rand.hpp"
 #include "util/skbb_detect_acc.hpp"
 
+unsigned int skbb_get_api_version() {
+ return SKBB_API_CURRENT_VERSION;
+}
+
 void skbb_set_random_seed(unsigned int new_seed) {
   skbb::set_random_seed(new_seed);
 }

@@ -413,6 +413,15 @@ void test_pcoa_fsvd() {
 
 int main(int argc, char** argv) {
     global_failed = false;
+    {
+      failed = false;
+
+      /* we are assuming we are testing our own build */
+      ASSERT(skbb_get_api_version()==SKBB_API_CURRENT_VERSION);
+      if (failed) {
+        printf("ERROR: Version check failed\n");
+      }
+    }
     test_center_mat();
     skbb_set_random_seed(33); // no test, just exercising util.h
     test_pcoa_fsvd();
