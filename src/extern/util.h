@@ -7,6 +7,15 @@
  * See LICENSE file for more details
  */
 
+/*
+ * These are the public functions accessible from the
+ *  libskbb
+ * shared library,
+ * the source of which is maintained in the scikit-bio-binaries repo.
+ *  https://github.com/scikit-bio/scikit-bio-binaries
+ *
+ */
+
 #ifndef SKBB_EXTERN_UTIL_H
 #define SKBB_EXTERN_UTIL_H
 
