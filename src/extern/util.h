@@ -56,9 +56,11 @@ EXTERN void skbb_set_random_seed(unsigned int new_seed);
  * and force a different outcome.
  */
 
-extern unsigned int SKBB_ACC_CPU;  /* no acceleration, always possible */
-extern unsigned int SKBB_ACC_NV;
-extern unsigned int SKBB_ACC_AMD;
+/* no acceleration, always possible */
+#define SKBB_ACC_CPU 0
+/* true acceleration, may not be available */
+#define SKBB_ACC_NV  1
+#define SKBB_ACC_AMD 2
 
 /* What variant of accelerated code is currently in use */
 EXTERN unsigned int skbb_get_acc_mode();

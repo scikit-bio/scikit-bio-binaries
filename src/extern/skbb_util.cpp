@@ -12,10 +12,6 @@
 #include "util/rand.hpp"
 #include "util/skbb_detect_acc.hpp"
 
-unsigned int SKBB_ACC_CPU = skbb::ACC_CPU;
-unsigned int SKBB_ACC_NV = skbb::ACC_NV;
-unsigned int SKBB_ACC_AMD = skbb::ACC_AMD;
-
 void skbb_set_random_seed(unsigned int new_seed) {
   skbb::set_random_seed(new_seed);
 }
