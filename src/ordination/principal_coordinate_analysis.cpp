@@ -214,19 +214,24 @@ inline void mat_dot_T<float>(const float *mat, const float *other, const uint32_
 // Step 1
 // centered == n x n
 // randomized = k*2 x n (ColOrder... n elements together)
+// Note on seed:
+//   If <0, treat it as invalid and use the global random generator
 template<class TReal>
-static inline void centered_randomize_T(const TReal centered[], const uint32_t n_dims, const uint32_t k, TReal randomized[]) {
+static inline void centered_randomize_T(const TReal centered[], const uint32_t n_dims, const uint32_t k, const int seed, TReal randomized[]) {
   uint64_t matrix_els = uint64_t(n_dims)*uint64_t(k);
   TReal * tmp = (TReal *) malloc(matrix_els*sizeof(TReal));
 
-  auto& myRandomGenerator = skbb::get_random_generator();
+  auto& globalRandomGenerator = skbb::get_random_generator();
+  unsigned int gen_seed = (seed<0) ? globalRandomGenerator() : seed;
 
   // Form a real n x k matrix whose entries are independent, identically
   // distributed Gaussian random variables of zero mean and unit variance
   TReal *G = tmp;
   {
+    skbb::TRAND rand;
+    rand.seed(gen_seed);
     std::normal_distribution<TReal> distribution;
-    for (uint64_t i=0; i<matrix_els; i++) G[i] = distribution(myRandomGenerator);
+    for (uint64_t i=0; i<matrix_els; i++) G[i] = distribution(rand);
   }
 
   // Note: Using the transposed version for efficiency (COL_ORDER)
@@ -396,13 +401,14 @@ inline void transpose_T(const uint64_t rows, const uint64_t cols, const TReal in
  *   n_dims    - Size of the matrix
  *   centered  - Centered distance matrix (n_dims x n_dims), will be overwritten during compute
  *   n_eighs   - Number of eigenvalues to return
+ *   seed      - Optional random seed, if non-negative. Use system random seed if <0
  *
  *  Output parameters:
  *   eigenvalues          - Array of size n_eighs, pre-allocated
  *   eigenvectors         - Matrix of size (n_dims x n_eighs), pre-allocated
  */
 template<class TReal>
-inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const uint32_t n_eighs, TReal eigenvalues[], TReal eigenvectors[]) {
+inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const uint32_t n_eighs, const int seed, TReal eigenvalues[], TReal eigenvectors[]) {
   const uint32_t k = n_eighs+2;
 
   int rc;
@@ -414,7 +420,7 @@ inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const ui
     TReal *H = (TReal *) malloc(sizeof(TReal)*uint64_t(n_dims)*uint64_t(k)*2);
 
     // step 1
-    centered_randomize_T<TReal>(centered, n_dims, k, H);
+    centered_randomize_T<TReal>(centered, n_dims, k, seed, H);
 
     // step 2
     // QR decomposition of H 
@@ -466,12 +472,12 @@ inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const ui
   free(Ut);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double eigenvalues[], double eigenvectors[]) {
-  find_eigens_fast_T<double>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
+void skbb::find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs,const int seed,  double eigenvalues[], double eigenvectors[]) {
+  find_eigens_fast_T<double>(n_dims, centered, n_eighs, seed, eigenvalues, eigenvectors);
 }
 
-void skbb::find_eigens_fast(const uint32_t n_dims, float centered[], const uint32_t n_eighs, float eigenvalues[], float eigenvectors[]) {
-  find_eigens_fast_T<float>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
+void skbb::find_eigens_fast(const uint32_t n_dims, float centered[], const uint32_t n_eighs, const int seed, float eigenvalues[], float eigenvectors[]) {
+  find_eigens_fast_T<float>(n_dims, centered, n_eighs, seed, eigenvalues, eigenvectors);
 }
 
 // helper class
@@ -553,6 +559,7 @@ public:
  *   mat       - Distance matrix (n_dims x n_dims)
  *   center_obj- Buffer holding the centered matrix buffer (n_dims x n_dims)
  *   n_eighs   - Number of eigenvalues to return
+ *   seed      - Optional random seed, if non-negative. Use system random seed if <0
  *
  *  Output parameters:
  *   eigenvalues          - Array of size n_eighs, pre-allocated
@@ -564,7 +571,8 @@ public:
 */
 
 template<class TRealIn, class TReal, class TCenter>
-static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_obj, const uint32_t n_eighs, TReal eigenvalues[], TReal samples[], TReal proportion_explained[]) {
+static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_obj, const uint32_t n_eighs, const int seed,
+		          TReal eigenvalues[], TReal samples[], TReal proportion_explained[]) {
   TReal diag_sum = 0.0;
   // we will use the samples buffer to hold the eigenvectors during compute
   TReal * const eigenvectors = samples;
@@ -581,7 +589,7 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
 
     // Find eigenvalues and eigenvectors
     // Use the Fast method... will return the allocated buffers
-    find_eigens_fast_T<TReal>(n_dims, centered, n_eighs, eigenvalues, eigenvectors);
+    find_eigens_fast_T<TReal>(n_dims, centered, n_eighs, seed, eigenvalues, eigenvectors);
 
     center_obj.release_buf();
   }
@@ -626,28 +634,33 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
 // Main, external interfaces
 //
 
-void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]) {
+void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, const int seed,
+		     double eigenvalues[], double samples[], double proportion_explained[]) {
   skbb::NewCentered<double> cobj(n_dims);
-  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]) {
+void skbb::pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, const int seed,
+		     float  eigenvalues[], float  samples[], float  proportion_explained[]) {
   skbb::NewCentered<float> cobj(n_dims);
-  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]) {
+void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, const int seed,
+		     float  eigenvalues[], float  samples[], float  proportion_explained[]) {
   skbb::NewCentered<float> cobj(n_dims);
-  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]) {
+void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, const int seed,
+		             double eigenvalues[], double samples[], double proportion_explained[]) {
   skbb::InPlaceCentered<double> cobj(mat);
-  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
 }
 
-void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]) {
+void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, const int seed,
+		             float  eigenvalues[], float  samples[], float  proportion_explained[]) {
   skbb::InPlaceCentered<float> cobj(mat);
-  pcoa_T(n_dims, mat, cobj, n_eighs, eigenvalues, samples, proportion_explained);
+  pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
 }
 

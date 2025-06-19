@@ -58,6 +58,7 @@ EXTERN void skbb_center_distance_matrix_fp64_to_fp32(unsigned int n_dims, const 
  *   n_dims    - Size of the matrix
  *   centered  - Centered distance matrix (n_dims x n_dims), will be overwritten during compute
  *   n_eighs   - Number of eigenvalues to return
+ *   seed      - Optional random seed, if non-negative. Use system random seed if <0
  *
  *  Output parameters:
  *   eigenvalues          - Array of size n_eighs, pre-allocated
@@ -65,8 +66,8 @@ EXTERN void skbb_center_distance_matrix_fp64_to_fp32(unsigned int n_dims, const 
  */
 #define SKBB_FSVD_API_MIN_VERSION 1
 
-EXTERN void skbb_fsvd_inplace_fp64(unsigned int n_dims, double centered[], unsigned int n_eighs, double eigenvalues[], double eigenvectors[]);
-EXTERN void skbb_fsvd_inplace_fp32(unsigned int n_dims, float  centered[], unsigned int n_eighs, float  eigenvalues[], float  eigenvectors[]);
+EXTERN void skbb_fsvd_inplace_fp64(unsigned int n_dims, double centered[], unsigned int n_eighs, int seed, double eigenvalues[], double eigenvectors[]);
+EXTERN void skbb_fsvd_inplace_fp32(unsigned int n_dims, float  centered[], unsigned int n_eighs, int seed, float  eigenvalues[], float  eigenvectors[]);
 
 /*
  *  Perform Principal Coordinate Analysis.
@@ -94,6 +95,7 @@ EXTERN void skbb_fsvd_inplace_fp32(unsigned int n_dims, float  centered[], unsig
  *   n_dims    - Size of the matrix
  *   mat       - Distance matrix (n_dims x n_dims)
  *   n_eighs   - Number of eigenvalues to return
+ *   seed      - Optional random seed, if non-negative. Use system random seed if <0
  *
  *  Output parameters:
  *   eigenvalues          - Array of size n_eighs, pre-allocated
@@ -106,12 +108,12 @@ EXTERN void skbb_fsvd_inplace_fp32(unsigned int n_dims, float  centered[], unsig
 
 #define SKBB_PCOA_FSVD_API_MIN_VERSION 1
 
-EXTERN void skbb_pcoa_fsvd_fp64(unsigned int n_dims, const double mat[], unsigned int n_eighs, double eigenvalues[], double samples[], double proportion_explained[]);
-EXTERN void skbb_pcoa_fsvd_fp32(unsigned int n_dims, const float  mat[], unsigned int n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
-EXTERN void skbb_pcoa_fsvd_fp64_to_fp32(unsigned int n_dims, const double mat[], unsigned int n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
+EXTERN void skbb_pcoa_fsvd_fp64(unsigned int n_dims, const double mat[], unsigned int n_eighs, int seed, double eigenvalues[], double samples[], double proportion_explained[]);
+EXTERN void skbb_pcoa_fsvd_fp32(unsigned int n_dims, const float  mat[], unsigned int n_eighs, int seed, float  eigenvalues[], float  samples[], float  proportion_explained[]);
+EXTERN void skbb_pcoa_fsvd_fp64_to_fp32(unsigned int n_dims, const double mat[], unsigned int n_eighs, int seed, float  eigenvalues[], float  samples[], float  proportion_explained[]);
 
 // in-place version, will use mat as temp buffer internally
-EXTERN void skbb_pcoa_fsvd_inplace_fp64(unsigned int n_dims, double mat[], unsigned int n_eighs, double eigenvalues[], double samples[], double proportion_explained[]);
-EXTERN void skbb_pcoa_fsvd_inplace_fp32(unsigned int n_dims, float  mat[], unsigned int n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
+EXTERN void skbb_pcoa_fsvd_inplace_fp64(unsigned int n_dims, double mat[], unsigned int n_eighs, int seed, double eigenvalues[], double samples[], double proportion_explained[]);
+EXTERN void skbb_pcoa_fsvd_inplace_fp32(unsigned int n_dims, float  mat[], unsigned int n_eighs, int seed, float  eigenvalues[], float  samples[], float  proportion_explained[]);
 
 #endif

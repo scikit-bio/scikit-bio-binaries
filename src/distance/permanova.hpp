@@ -41,14 +41,15 @@ namespace skbb {
  *   mat       - distance matrix (n_dims x n_dims)
  *   grouping  - grouping array of size n_dims 
  *   n_perm    - number of permutations
+ *   seed      - Optional random seed, if non-negative. Use system random seed if <0
  *
  *  Output parameters:
  *   fstat_out  - pseudo-F statistics
  *   pvalue_out - p-value
  */
 
-void permanova(unsigned int n_dims, const double mat[], const uint32_t grouping[], unsigned int n_perm, double &fstat_out, double &pvalue_out);
-void permanova(unsigned int n_dims, const float  mat[], const uint32_t grouping[], unsigned int n_perm, float  &fstat_out, float  &pvalue_out);
+void permanova(unsigned int n_dims, const double mat[], const uint32_t grouping[], unsigned int n_perm, int seed, double &fstat_out, double &pvalue_out);
+void permanova(unsigned int n_dims, const float  mat[], const uint32_t grouping[], unsigned int n_perm, int seed, float  &fstat_out, float  &pvalue_out);
 
 }
 

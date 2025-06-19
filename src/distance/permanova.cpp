@@ -61,6 +61,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
                                    uint32_t n_groups,
                                    const uint32_t group_sizes[],
                                    const uint32_t n_perm,
+				   const int seed,
                                    TFloat *permutted_sWs) {
 #if defined(SKBB_ENABLE_ACC_NV) || defined(SKBB_ENABLE_ACC_AMD)
   // There is acc-specific logic here, initialize skbio_use_acc ASAP
@@ -97,7 +98,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
   }
 
   // will also use dedicated generators for deterministic behavior in threaded environment
-  skbb::RandomGeneratorArray randomGenerators(step_perms);
+  skbb::RandomGeneratorArray randomGenerators(step_perms, seed);
 
   // We will use only 1/N, so pre-process
   TFloat *inv_group_sizes = new TFloat[n_groups];
@@ -212,6 +213,7 @@ static inline void permanova_all_T(const uint32_t n_dims,
                             const TFloat mat[],
                             const uint32_t grouping[],
                             const uint32_t n_perm,
+                            const int seed,
                             TFloat *permutted_fstats) {
   // first count the elements in the grouping
   uint32_t n_groups = (*std::max_element(grouping,grouping+n_dims)) + 1;
@@ -226,6 +228,7 @@ static inline void permanova_all_T(const uint32_t n_dims,
     permanova_perm_fp_sW_T<TFloat>(n_dims,mat,grouping,
                                    n_groups,group_sizes,
                                    n_perm,
+				   seed,
                                    permutted_sWs);
   }
 
@@ -254,10 +257,11 @@ static inline void permanova_T(const uint32_t n_dims,
                         const TFloat mat[],
                         const uint32_t grouping[],
                         const uint32_t n_perm,
+                        const int seed,
                         TFloat &fstat, TFloat &pvalue) {
   // First compute all the permutations
   TFloat *permutted_fstats = new TFloat[n_perm+1];
-  permanova_all_T<TFloat>(n_dims,mat,grouping,n_perm,permutted_fstats);
+  permanova_all_T<TFloat>(n_dims,mat,grouping,n_perm,seed,permutted_fstats);
 
   // keep the first one and compute p_value, too
   TFloat myfstat = permutted_fstats[0];
@@ -283,8 +287,9 @@ void skbb::permanova(unsigned int n_dims,
                    const double mat[],
                    const uint32_t grouping[],
                    unsigned int n_perm,
+                   int seed,
                    double &fstat_out, double &pvalue_out) {
-  permanova_T<double>(n_dims, mat, grouping, n_perm,
+  permanova_T<double>(n_dims, mat, grouping, n_perm, seed,
                       fstat_out, pvalue_out);
 }
 
@@ -292,8 +297,9 @@ void skbb::permanova(unsigned int n_dims,
                    const float mat[],
                    const uint32_t grouping[],
                    unsigned int n_perm,
+                   int seed,
                    float &fstat_out, float &pvalue_out) {
-  permanova_T<float>(n_dims, mat, grouping, n_perm,
+  permanova_T<float>(n_dims, mat, grouping, n_perm, seed,
                      fstat_out, pvalue_out);
 }
 

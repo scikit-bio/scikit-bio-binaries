@@ -34,7 +34,11 @@ namespace skbb {
   private:
     TRAND *randomGenerators;
   public:
-    RandomGeneratorArray(uint32_t array_size);
+    // Arguments:
+    //   array_size - number of random generators
+    //   seed       - Optional random seed, if non-negative. Use system random seed if <0
+    RandomGeneratorArray(uint32_t array_size, int seed);
+    RandomGeneratorArray(uint32_t array_size); // equivalent to passing seed<0
     ~RandomGeneratorArray() {
       delete[] randomGenerators;
     }
@@ -43,7 +47,8 @@ namespace skbb {
     RandomGeneratorArray(const RandomGeneratorArray &other) = delete;
     RandomGeneratorArray& operator=(const RandomGeneratorArray &other) = delete;
 
-    // return the index-specific random generator
+    // return the index-specific random generatora
+    // Note: No boundary checking, caller must ensure i is in a valid range
     TRAND& get_random_generator(uint32_t i) {
       return randomGenerators[i];
     }

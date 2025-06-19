@@ -108,6 +108,9 @@ void test_center_mat() {
 void test_pcoa_fsvd() {
     SUITE_START("test pcoa<fsvd>");
 
+    constexpr int rand_seed_invalid = -1;  // must be <0
+    constexpr int rand_seed_valid = 33333;    // must be >=0
+
     // unweighted unifrac of crawford.biom
     double matrix[] = { 
       0.         , 0.71836067 , 0.71317361 , 0.69746044 , 0.62587207 , 0.72826674
@@ -190,7 +193,7 @@ void test_pcoa_fsvd() {
     {
       double eigenvalues[5];
       double eigenvectors[5*9];
-      skbb::find_eigens_fast(n_samples, centered, 5, eigenvalues, eigenvectors);
+      skbb::find_eigens_fast(n_samples, centered, 5, rand_seed_invalid, eigenvalues, eigenvectors);
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues[i]),float(exp3a[i]));
@@ -207,7 +210,7 @@ void test_pcoa_fsvd() {
     {
       float eigenvalues[5];
       float eigenvectors[5*9];
-      skbb::find_eigens_fast(n_samples, centered_fp32, 5, eigenvalues, eigenvectors);
+      skbb::find_eigens_fast(n_samples, centered_fp32, 5, rand_seed_valid, eigenvalues, eigenvectors);
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues[i]),float(exp3a[i]));
@@ -246,7 +249,7 @@ void test_pcoa_fsvd() {
       double samples[5*9];
       double proportion_explained[5];
 
-      skbb::pcoa_fsvd(n_samples, matrix, 5, eigenvalues, samples, proportion_explained); 
+      skbb::pcoa_fsvd(n_samples, matrix, 5, rand_seed_invalid, eigenvalues, samples, proportion_explained); 
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues[i]),float(exp4a[i]));
@@ -272,7 +275,7 @@ void test_pcoa_fsvd() {
       float samples_fp32[5*9];
       float proportion_explained_fp32[5];
 
-      skbb::pcoa_fsvd(n_samples, matrix_fp32, 5, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
+      skbb::pcoa_fsvd(n_samples, matrix_fp32, 5, rand_seed_valid, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues_fp32[i]),float(exp4a[i]));
@@ -298,7 +301,7 @@ void test_pcoa_fsvd() {
       float samples_fp32[5*9];
       float proportion_explained_fp32[5];
 
-      skbb::pcoa_fsvd(n_samples, matrix, 5, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
+      skbb::pcoa_fsvd(n_samples, matrix, 5, rand_seed_valid, eigenvalues_fp32, samples_fp32, proportion_explained_fp32);
 
       for(int i = 0; i < 5; i++) {
         //printf("%i %f %f\n",i,float(eigenvalues_fp32[i]),float(exp4a[i]));
@@ -324,7 +327,7 @@ void test_pcoa_fsvd() {
       double samples[5*9];
       double proportion_explained[5];
 
-      skbb::pcoa_fsvd_inplace(n_samples, matrix, 5, eigenvalues, samples, proportion_explained);
+      skbb::pcoa_fsvd_inplace(n_samples, matrix, 5, rand_seed_valid, eigenvalues, samples, proportion_explained);
       // Note: matrix content has been destroyed
 
       for(int i = 0; i < 5; i++) {
@@ -351,7 +354,7 @@ void test_pcoa_fsvd() {
       float samples[5*9];
       float proportion_explained[5];
 
-      skbb::pcoa_fsvd_inplace(n_samples, matrix_fp32, 5, eigenvalues, samples, proportion_explained);
+      skbb::pcoa_fsvd_inplace(n_samples, matrix_fp32, 5, rand_seed_invalid, eigenvalues, samples, proportion_explained);
       // Note: matrix_fp32 content has been destroyed
 
       for(int i = 0; i < 5; i++) {

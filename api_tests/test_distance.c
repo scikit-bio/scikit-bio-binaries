@@ -52,24 +52,28 @@ void test_permanova_ties() {
 
     skbb_permanova_fp64(n_samples, matrix_fp64,
                   grouping_equal, 999,
+		  -1,
                   &stat_fp64, &pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
     skbb_permanova_fp32(n_samples, matrix_fp32,
                   grouping_equal, 999,
+		  5,
                   &stat_fp32, &pvalue_fp32);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
     skbb_permanova_fp32(n_samples, matrix_fp32,
                   grouping_equal_swapped, 999,
+		  3,
                   &stat_fp32, &pvalue_fp32);
     ASSERT(fabs(stat_fp32 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp32 - exp_pvalue) < 0.05);
 
     skbb_permanova_fp64(n_samples, matrix_fp64,
                   grouping_equal_swapped, 999,
+		  -1,
                   &stat_fp64, &pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);

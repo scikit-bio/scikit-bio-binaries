@@ -51,13 +51,14 @@ void mat_to_centered(const uint32_t n_dims, const double mat[], float  centered[
  *   n_dims    - Size of the matrix
  *   centered  - Centered distance matrix (n_dims x n_dims), will be overwritten during compute
  *   n_eighs   - Number of eigenvalues to return
+ *   seed      - Optional random seed, if non-negative. Use system random seed if <0
  *
  *  Output parameters:
  *   eigenvalues          - Array of size n_eighs, pre-allocated
  *   eigenvectors         - Matrix of size (n_dims x n_eighs), pre-allocated
  */
-void find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, double eigenvalues[], double eigenvectors[]);
-void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n_eighs, float  eigenvalues[], float  eigenvectors[]);
+void find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs, const int seed, double eigenvalues[], double eigenvectors[]);
+void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n_eighs, const int seed, float  eigenvalues[], float  eigenvectors[]);
 
 /*
  *  Perform Principal Coordinate Analysis.
@@ -85,6 +86,7 @@ void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n
  *   n_dims    - Size of the matrix
  *   mat       - Distance matrix (n_dims x n_dims)
  *   n_eighs   - Number of eigenvalues to return
+ *   seed      - Optional random seed, if non-negative. Use system random seed if <0
  *
  *  Output parameters:
  *   eigenvalues          - Array of size n_eighs, pre-allocated
@@ -95,13 +97,13 @@ void find_eigens_fast(const uint32_t n_dims, float  centered[], const uint32_t n
  *                          The index corresponds to the ordination axis labels.
 */
 
-void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]);
-void pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
-void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
+void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, const int seed, double eigenvalues[], double samples[], double proportion_explained[]);
+void pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, const int seed, float  eigenvalues[], float  samples[], float  proportion_explained[]);
+void pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, const int seed, float  eigenvalues[], float  samples[], float  proportion_explained[]);
 
 // in-place version, will use mat as temp buffer internally
-void pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, double eigenvalues[], double samples[], double proportion_explained[]);
-void pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, float  eigenvalues[], float  samples[], float  proportion_explained[]);
+void pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, const int seed, double eigenvalues[], double samples[], double proportion_explained[]);
+void pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, const int seed, float  eigenvalues[], float  samples[], float  proportion_explained[]);
 
 }
 

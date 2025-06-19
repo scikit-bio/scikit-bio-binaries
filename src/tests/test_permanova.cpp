@@ -33,6 +33,8 @@ void test_permanova_ties() {
 
     const uint32_t n_samples = 4;
 
+    constexpr int rand_seed_invalid = -1;  // must be <0
+    constexpr int rand_seed_valid = 4242;    // must be >=0
 
     // value from skbio
     const float exp_stat = 2.0;
@@ -44,24 +46,28 @@ void test_permanova_ties() {
 
     skbb::permanova(n_samples, matrix_fp64,
                   grouping_equal, 999,
+		  rand_seed_valid,
                   stat_fp64, pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp32,
                   grouping_equal, 999,
+		  rand_seed_invalid,
                   stat_fp32, pvalue_fp32);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp32,
                   grouping_equal_swapped, 999,
+		  rand_seed_valid,
                   stat_fp32, pvalue_fp32);
     ASSERT(fabs(stat_fp32 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp32 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp64,
                   grouping_equal_swapped, 999,
+		  rand_seed_invalid,
                   stat_fp64, pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
@@ -89,6 +95,8 @@ void test_permanova_noties() {
 
     const uint32_t n_samples = 4;
 
+    constexpr int rand_seed_invalid = -14567;  // must be <0
+    constexpr int rand_seed_valid = 4242003;    // must be >=0
 
     // value from skbio
     const float exp_stat = 4.4;
@@ -100,24 +108,28 @@ void test_permanova_noties() {
 
     skbb::permanova(n_samples, matrix_fp64,
                   grouping_equal, 999,
+		  rand_seed_valid,
                   stat_fp64, pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp32,
                   grouping_equal, 999,
+		  rand_seed_valid,
                   stat_fp32, pvalue_fp32);
     ASSERT(fabs(stat_fp32 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp32 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp32,
                   grouping_equal_swapped, 999,
+		  rand_seed_invalid,
                   stat_fp32, pvalue_fp32);
     ASSERT(fabs(stat_fp32 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp32 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp64,
                   grouping_equal_swapped, 999,
+		  rand_seed_invalid,
                   stat_fp64, pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
@@ -149,6 +161,8 @@ void test_permanova_unequal() {
 
     const uint32_t n_samples = 6;
 
+    constexpr int rand_seed_invalid = -3;  // must be <0
+    constexpr int rand_seed_valid = 1;    // must be >=0
 
     // value from skbio
     const float exp_stat = 0.578848;
@@ -160,24 +174,28 @@ void test_permanova_unequal() {
 
     skbb::permanova(n_samples, matrix_fp64,
                   grouping_equal, 999,
+		  rand_seed_invalid,
                   stat_fp64, pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp32,
                   grouping_equal, 999,
+		  rand_seed_invalid,
                   stat_fp32, pvalue_fp32);
     ASSERT(fabs(stat_fp32 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp32 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp32,
                   grouping_equal, 999,
+		  rand_seed_valid,
                   stat_fp32, pvalue_fp32);
     ASSERT(fabs(stat_fp32 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp32 - exp_pvalue) < 0.05);
 
     skbb::permanova(n_samples, matrix_fp64,
                   grouping_equal_swapped, 999,
+		  rand_seed_valid,
                   stat_fp64, pvalue_fp64);
     ASSERT(fabs(stat_fp64 - exp_stat) < 0.00001);
     ASSERT(fabs(pvalue_fp64 - exp_pvalue) < 0.05);

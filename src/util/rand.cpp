@@ -25,12 +25,31 @@ skbb::TRAND& skbb::get_random_generator() {
   return myRandomGenerator;
 }
 
+static inline void rga_init(const uint32_t array_size, skbb::TRAND randomGenerators[], skbb::TRAND& rand) {
+  // use the provided random generator to get a unique starting seed
+  for (uint32_t el=0; el < array_size; el++) {
+    auto new_seed = rand();
+    randomGenerators[el].seed(new_seed);
+  }
+}
+
+
 skbb::RandomGeneratorArray::RandomGeneratorArray(uint32_t array_size)
   : randomGenerators(new skbb::TRAND[array_size]) {
-  // use the global reandom generator to get a unique starting seed
-  for (uint32_t el=0; el < array_size; el++) {
-    auto new_seed = myRandomGenerator();
-    randomGenerators[el].seed(new_seed);
+  rga_init(array_size,randomGenerators,myRandomGenerator);
+}
+
+skbb::RandomGeneratorArray::RandomGeneratorArray(uint32_t array_size, int seed)
+  : randomGenerators(new skbb::TRAND[array_size]) {
+  if (seed<0) {
+    // no seed, just use global rand
+    rga_init(array_size,randomGenerators,myRandomGenerator);
+  } else {
+    // use the global random generator to get a unique starting seed
+    skbb::TRAND local_random;
+    local_random.seed((unsigned int)(seed));
+    // now use the loca random for the rest of the logic
+    rga_init(array_size,randomGenerators,local_random);
   }
 }
 
