@@ -1,4 +1,4 @@
-|License| |Downloads| |Install|
+|License| |Version| |Downloads| |Platforms|
 
 .. image:: https://scikit.bio/_images/logo.svg
    :width: 300 px
@@ -8,19 +8,14 @@
 *scikit-bio-binaries is an open-source, BSD-licensed package providing optimized algorithms for bioinformatics in support of scikit-bio.*
 
 
-Releases
---------
-
-There are currently no releases available.
-
 Installation
 ------------
 
-In the near future you will be able to install the latest release of scikit-bio-binaries using ``conda`` (`<https://www.anaconda.com/docs/getting-started/miniconda/main>`_)::
+You can install the latest release of scikit-bio-binaries using ``conda`` (`<https://www.anaconda.com/docs/getting-started/miniconda/main>`_)::
 
     conda install -c conda-forge scikit-bio-binaries
 
-Or using ``pip``::
+Alternatively, in the near future you will be able to install the latest release of scikit-bio-binaries using ``pip``::
 
     pip install scikit-bio-binaries
 
@@ -47,6 +42,30 @@ To test that the build succeeded, run::
 
     make test
 
+Provided files and their usage
+------------------------------
+
+The functions provided by scikit-bio-binaries are packaged as a shared library and will be installed in::
+
+    $CONDA_PREFIX/lib/libskbb.so
+
+The C header files that describe how to access them are avaialable in `<src/extern/>`_, but will also be installed in::
+
+    $CONDA_PREFIX/include/scikit-bio-binaries/
+
+Compiled languages can use the provided C headers during compilation, and link against the provided shared library.
+See `<api_tests/>`_ for an example::
+
+    $(CC) $(CFLAGS) my_code.c $(LDFLAGS) -lskbb -o my_exe
+
+Python users can instead use the `ctypes <https://docs.python.org/3/library/ctypes.html>`_ module
+to import the shared library at runtime. No header files are needed (or provided),
+but you can use the C headers to guide your implementation.
+For example::
+
+    import ctypes
+    dll = ctypes.CDLL("libskbb.so")
+    skbb_version = dll.skbb_get_api_version()
 
 Adoption
 --------
@@ -96,7 +115,9 @@ The logo of scikit-bio was created by `Alina Prassas <https://cargocollective.co
 
 .. |License| image:: https://anaconda.org/conda-forge/scikit-bio-binaries/badges/license.svg
    :target: https://anaconda.org/conda-forge/scikit-bio-binaries
+.. |Version| image:: https://anaconda.org/conda-forge/scikit-bio-binaries/badges/version.svg
+   :target: https://anaconda.org/conda-forge/scikit-bio-binaries
 .. |Downloads| image:: https://anaconda.org/conda-forge/scikit-bio-binaries/badges/downloads.svg
    :target: https://anaconda.org/conda-forge/scikit-bio-binaries
-.. |Install| image:: https://anaconda.org/conda-forge/scikit-bio-binaries/badges/installer/conda.svg
-   :target: https://conda.anaconda.org/conda-forge-binaries
+.. |Platforms| image:: https://anaconda.org/conda-forge/scikit-bio-binaries/badges/platforms.svg
+   :target: https://anaconda.org/conda-forge/scikit-bio-binaries
