@@ -36,8 +36,19 @@ else
 endif
 
 ifeq ($(ARCH),x86_64)
+  ifeq ($(PLATFORM),Darwin)
+   # No new x86 on Mac, so no need to make our life complicated
+  else
+   # create optimized versions for all the higher x86_64 levels
+   CXXFLAGS += -DSKBB_ENABLE_CPU_X86_LEVELS=1
+   CXXFLAGS += -DSKBB_ENABLE_CPU_X86V3=1 -DSKBB_ENABLE_CPU_X86V4=1
+   SKBB_ENABLE_CPU_X86V3 := 1
+   SKBB_ENABLE_CPU_X86V4 := 1
+   # cpu_x86_v3 is AVX2
    X86V3FLAGS := -march=x86-64-v3 -mtune=broadwell
+   # cpu_x86_v4 is AVX512
    X86V4FLAGS := -march=x86-64-v4 -mtune=znver4
+  endif
 endif
 
 CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
@@ -141,24 +152,25 @@ permanova_cpu.cpp: distance/permanova_dyn.hpp
 permanova_cpu.o: permanova_cpu.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
 	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_cpu -c $< -o $@
 
-ifeq ($(ARCH),x86_64)
-# create optimized versions for all the higher x86_64 levels
-SKBB_OBJS += permanova_cpu_x86_v3.o permanova_cpu_x86_v4.o
+ifeq ($(SKBB_ENABLE_CPU_X86V3),1)
+SKBB_OBJS += permanova_cpu_x86_v3.o
 
-# cpu_x86_v3 is AVX2
 permanova_cpu_x86_v3.cpp: distance/permanova_dyn.hpp
 	./tools/generate_permanova_dyn.py cpu_x86_v3 direct > $@
 
 permanova_cpu_x86_v3.o: permanova_cpu_x86_v3.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
 	$(CXX) $(CXXFLAGS) $(X86V3FLAGS) -DSKBB_ACC_NM=skbb_cpu_x86_v3 -c $< -o $@
 
-# cpu_x86_v4 is AVX512
+endif
+
+ifeq ($(SKBB_ENABLE_CPU_X86V4),1)
+SKBB_OBJS += permanova_cpu_x86_v4.o
+
 permanova_cpu_x86_v4.cpp: distance/permanova_dyn.hpp
 	./tools/generate_permanova_dyn.py cpu_x86_v4 direct > $@
 
 permanova_cpu_x86_v4.o: permanova_cpu_x86_v4.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
 	$(CXX) $(CXXFLAGS) $(X86V4FLAGS) -DSKBB_ACC_NM=skbb_cpu_x86_v4 -c $< -o $@
-
 
 endif
 

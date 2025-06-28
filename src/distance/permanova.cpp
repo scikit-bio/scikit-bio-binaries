@@ -13,15 +13,23 @@
  */
 
 #include "distance/permanova.hpp"
-
-#if defined(SKBB_ENABLE_ACC_NV) || defined(SKBB_ENABLE_ACC_AMD)
 #include "util/skbb_detect_acc.hpp"
-#endif
 
 #define SKBB_ACC_NM  skbb_cpu
-#include "util/skbb_accapi.hpp"
 #include "distance/permanova_dyn.hpp"
 #undef SKBB_ACC_NM
+
+#ifdef SKBB_ENABLE_CPU_X86V3
+#define SKBB_ACC_NM  skbb_cpu_x86_v3
+#include "distance/permanova_dyn.hpp"
+#undef SKBB_ACC_NM
+#endif
+
+#ifdef SKBB_ENABLE_CPU_X86V4
+#define SKBB_ACC_NM  skbb_cpu_x86_v4
+#include "distance/permanova_dyn.hpp"
+#undef SKBB_ACC_NM
+#endif
 
 #ifdef SKBB_ENABLE_ACC_NV
 #define SKBB_ACC_NM  skbb_acc_nv
@@ -82,6 +90,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
 #endif
   } else {
     // default to CPU
+    // Note: Do not need to worry about architectural levels for this
     PERM_CHUNK = skbb_cpu::pmn_get_max_parallelism();
   }
 
@@ -157,13 +166,38 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
                                          permutted_sWs+tp);
 #endif
       } else {
-        // as above, default to CPU
+       // as above, default to CPU
+#ifdef SKBB_ENABLE_CPU_X86_LEVELS
+       auto use_cpu_x86 = skbb::check_use_cpu_x86();
+#endif
+       if (false) {
+#if defined(SKBB_ENABLE_CPU_X86V3)
+       } else if (use_cpu_x86==skbb::CPU_X86_V3) {
+        skbb_cpu_x86_v3::pmn_f_stat_sW<TFloat>(n_dims,
+                                         mat,
+					 max_p-tp,
+                                         permutted_groupings,
+                                         inv_group_sizes,
+                                         permutted_sWs+tp);
+#endif
+
+#if defined(SKBB_ENABLE_CPU_X86V4)
+       } else if (use_cpu_x86==skbb::CPU_X86_V4) {
+        skbb_cpu_x86_v4::pmn_f_stat_sW<TFloat>(n_dims,
+                                         mat,
+					 max_p-tp,
+                                         permutted_groupings,
+                                         inv_group_sizes,
+                                         permutted_sWs+tp);
+#endif
+       } else {
         skbb_cpu::pmn_f_stat_sW<TFloat>( n_dims,
                                          mat,
 					 max_p-tp,
                                          permutted_groupings,
                                          inv_group_sizes,
                                          permutted_sWs+tp);
+       }
       }
   }
 
