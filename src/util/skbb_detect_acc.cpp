@@ -28,6 +28,7 @@
 
 #include <stdlib.h> 
 #include <string> 
+#include <string.h>
 
 static constexpr unsigned int ACC_REPORT_FALSE=0;
 static constexpr unsigned int ACC_REPORT_TRUE=1;
@@ -225,6 +226,7 @@ unsigned int skbb::check_use_cpu_x86() {
  bool allow_v4 = true;
  if (env_max_cpu!=NULL) {
     if ((strcmp(env_max_cpu,"basic")==0) ||
+        (strcmp(env_max_cpu,"base")==0) ||
         (strcmp(env_max_cpu,"x86-64-v2")==0) ||
         (strcmp(env_max_cpu,"sse")==0) ||
         (strcmp(env_max_cpu,"sse3")==0) ||
@@ -279,7 +281,7 @@ unsigned int skbb::check_use_cpu_x86() {
      printf("INFO (skbio_bins): Using x86-64-v3 CPU\n");
 #endif
 #if defined(SKBB_ENABLE_CPU_X86V4)
-   } else if (detected_acpu_x86 == skbb::CPU_X86_V4) {
+   } else if (detected_cpu_x86 == skbb::CPU_X86_V4) {
      printf("INFO (skbio_bins): Using x86-64-v4 CPU\n");
 #endif
    } else {
