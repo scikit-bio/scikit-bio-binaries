@@ -6,6 +6,7 @@ all:
 	$(MAKE) install
 
 PLATFORM := $(shell uname -s)
+ARCH := $(shell uname -m)
 
 ifeq ($(PLATFORM),Darwin)
   # no GPUs on MacOS
@@ -32,6 +33,22 @@ ifeq ($(PLATFORM),Darwin)
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/libskbb.so
 else
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -shared
+endif
+
+ifeq ($(ARCH),x86_64)
+  ifeq ($(PLATFORM),Darwin)
+   # No new x86 on Mac, so no need to make our life complicated
+  else
+   # create optimized versions for all the higher x86_64 levels
+   CXXFLAGS += -DSKBB_ENABLE_CPU_X86_LEVELS=1
+   CXXFLAGS += -DSKBB_ENABLE_CPU_X86V3=1 -DSKBB_ENABLE_CPU_X86V4=1
+   SKBB_ENABLE_CPU_X86V3 := 1
+   SKBB_ENABLE_CPU_X86V4 := 1
+   # cpu_x86_v3 is AVX2
+   X86V3FLAGS := -march=x86-64-v3 -mtune=broadwell
+   # cpu_x86_v4 is AVX512
+   X86V4FLAGS := -march=x86-64-v4 -mtune=znver4
+  endif
 endif
 
 CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
@@ -125,15 +142,37 @@ dist_permanova.o: distance/permanova.cpp distance/permanova.hpp distance/permano
 #
 # permanova dynamic code wrappers generation
 #
-SKBB_OBJS += permanova_dyn_cpu.o
+SKBB_OBJS += permanova_cpu.o
 
 # Use the same compiler for CPU-based code
 # So no need for futher levels of indirection
-permanova_dyn_cpu.cpp: distance/permanova_dyn.hpp
+permanova_cpu.cpp: distance/permanova_dyn.hpp
 	./tools/generate_permanova_dyn.py cpu direct > $@
 
-permanova_dyn_cpu.o: permanova_dyn_cpu.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
+permanova_cpu.o: permanova_cpu.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
 	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_cpu -c $< -o $@
+
+ifeq ($(SKBB_ENABLE_CPU_X86V3),1)
+SKBB_OBJS += permanova_cpu_x86_v3.o
+
+permanova_cpu_x86_v3.cpp: distance/permanova_dyn.hpp
+	./tools/generate_permanova_dyn.py cpu_x86_v3 direct > $@
+
+permanova_cpu_x86_v3.o: permanova_cpu_x86_v3.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
+	$(CXX) $(CXXFLAGS) $(X86V3FLAGS) -DSKBB_ACC_NM=skbb_cpu_x86_v3 -c $< -o $@
+
+endif
+
+ifeq ($(SKBB_ENABLE_CPU_X86V4),1)
+SKBB_OBJS += permanova_cpu_x86_v4.o
+
+permanova_cpu_x86_v4.cpp: distance/permanova_dyn.hpp
+	./tools/generate_permanova_dyn.py cpu_x86_v4 direct > $@
+
+permanova_cpu_x86_v4.o: permanova_cpu_x86_v4.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
+	$(CXX) $(CXXFLAGS) $(X86V4FLAGS) -DSKBB_ACC_NM=skbb_cpu_x86_v4 -c $< -o $@
+
+endif
 
 #
 # True accelerated variants will use a separate compiler

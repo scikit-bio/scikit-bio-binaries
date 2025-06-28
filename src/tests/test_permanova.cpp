@@ -220,6 +220,20 @@ int main(int argc, char** argv) {
       SUITE_END();
     }
 
+#ifdef SKBB_ENABLE_CPU_X86_LEVELS
+    {
+      SUITE_START("test x86 CPU levels");
+
+      printf("[INFO] Forcibly enable x86 CPU reporting, current flag: %i\n",int(skbb::check_report_cpu_x86()));
+      skbb::set_report_cpu_x86(true);
+      ASSERT(skbb::check_report_cpu_x86());
+      printf("[INFO] Forcibly disable higher levels of x86 CPU, current mode: %i\n",int(skbb::check_use_cpu_x86()));
+      ASSERT(skbb::set_use_cpu_x86(skbb::CPU_X86_BASE));
+      ASSERT(skbb::check_use_cpu_x86()==0);
+      SUITE_END();
+    }
+#endif
+
     test_permanova_ties();
     test_permanova_noties();
     test_permanova_unequal();

@@ -38,6 +38,31 @@ namespace skbb {
   //   true if acc_type should be one of the above supported ones
   //   false otherwise, and the internal value is not changed
   bool set_use_acc(unsigned int acc_type);
+
+#ifdef SKBB_ENABLE_CPU_X86_LEVELS
+  // optional, internal, x86 levels interface
+  static constexpr unsigned int CPU_X86_BASE=0;
+  static constexpr unsigned int CPU_X86_V3=3;
+  static constexpr unsigned int CPU_X86_V4=4;
+
+  // is reporting of ACC use enabled?
+  bool check_report_cpu_x86();
+
+  // override the default value
+  void set_report_cpu_x86(bool new_value);
+
+  // =======
+
+  // what variant of accelerated code should I use
+  unsigned int check_use_cpu_x86();
+
+  // override the default value
+  // Returns:
+  //   true if acc_type should be one of the above supported ones
+  //   false otherwise, and the internal value is not changed
+  bool set_use_cpu_x86(unsigned int cpu_x86_level);
+
+#endif /* SKBB_ENABLE_CPU_X86_LEVELS */
 }
 
 #endif

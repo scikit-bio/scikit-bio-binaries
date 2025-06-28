@@ -67,6 +67,31 @@ For example::
     dll = ctypes.CDLL("libskbb.so")
     skbb_version = dll.skbb_get_api_version()
 
+Environment considerations
+--------------------------
+
+Multi-core support
+~~~~~~~~~~~~~~~~~~
+
+This package uses OpenMP to make use of multiple CPU cores.
+By default, scikit-bio-binaries will use all the cores that are available on the system.
+To restrict the number of cores used, set::
+
+    export OMP_NUM_THREADS=nthreads
+
+Older CPU support
+~~~~~~~~~~~~~~~~~~
+
+On x86_64 based CPU platforms, scikit-bio-binaries will auto-detect the CPU generation,
+i.e. if it supports avx2 or avx512 vector instructions.
+To force the most compatible binary variant, one can set::
+
+    export SKBB_MAX_CPU=basic
+
+To check which binary is used (scikit-bio-binaries will print it to standard output at runtime), set::
+
+    export SKBB_CPU_INFO=Y
+
 Adoption
 --------
 
