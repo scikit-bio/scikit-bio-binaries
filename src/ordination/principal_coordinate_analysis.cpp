@@ -13,6 +13,7 @@
  */
 
 #include "principal_coordinate_analysis.hpp"
+#include "util/skbb_dgb_info.hpp"
 #include "util/rand.hpp"
 
 #include <stdlib.h> 
@@ -409,6 +410,7 @@ inline void transpose_T(const uint64_t rows, const uint64_t cols, const TReal in
  */
 template<class TReal>
 inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const uint32_t n_eighs, const int seed, TReal eigenvalues[], TReal eigenvectors[]) {
+  SETUP_TDBG("find_eigens_fast")
   const uint32_t k = n_eighs+2;
 
   int rc;
@@ -421,6 +423,7 @@ inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const ui
 
     // step 1
     centered_randomize_T<TReal>(centered, n_dims, k, seed, H);
+    TDBG_STEP("center")
 
     // step 2
     // QR decomposition of H 
@@ -443,6 +446,7 @@ inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const ui
       fprintf(stderr, "svd_it_T<TReal>(n_dims, T, S) failed with %i\n",rc);
       exit(1); // should never fail, but just in case, like a segfault
     }
+    TDBG_STEP("svd")
 
     // step 5
     // Compute U = Q*Wt^t
@@ -470,6 +474,7 @@ inline void find_eigens_fast_T(const uint32_t n_dims, TReal centered[], const ui
   transpose_T<TReal>(n_dims, n_eighs, Ut, eigenvectors);
 
   free(Ut);
+  TDBG_STEP("finalize")
 }
 
 void skbb::find_eigens_fast(const uint32_t n_dims, double centered[], const uint32_t n_eighs,const int seed,  double eigenvalues[], double eigenvectors[]) {
@@ -636,31 +641,41 @@ static inline void pcoa_T(const uint32_t n_dims, TRealIn mat[], TCenter &center_
 
 void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, const int seed,
 		     double eigenvalues[], double samples[], double proportion_explained[]) {
+  SETUP_TDBG("pcoa_fsvd_fp64")
   skbb::NewCentered<double> cobj(n_dims);
   pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
+  TDBG_STEP("pcoa")
 }
 
 void skbb::pcoa_fsvd(const uint32_t n_dims, const float  mat[], const uint32_t n_eighs, const int seed,
 		     float  eigenvalues[], float  samples[], float  proportion_explained[]) {
+  SETUP_TDBG("pcoa_fsvd_fp32")
   skbb::NewCentered<float> cobj(n_dims);
   pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
+  TDBG_STEP("pcoa")
 }
 
 void skbb::pcoa_fsvd(const uint32_t n_dims, const double mat[], const uint32_t n_eighs, const int seed,
 		     float  eigenvalues[], float  samples[], float  proportion_explained[]) {
+  SETUP_TDBG("pcoa_fsvd_mixed")
   skbb::NewCentered<float> cobj(n_dims);
   pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
+  TDBG_STEP("pcoa")
 }
 
 void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, double mat[], const uint32_t n_eighs, const int seed,
 		             double eigenvalues[], double samples[], double proportion_explained[]) {
+  SETUP_TDBG("pcoa_fsvd_inplace_fp64")
   skbb::InPlaceCentered<double> cobj(mat);
   pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
+  TDBG_STEP("pcoa")
 }
 
 void skbb::pcoa_fsvd_inplace(const uint32_t n_dims, float  mat[], const uint32_t n_eighs, const int seed,
 		             float  eigenvalues[], float  samples[], float  proportion_explained[]) {
+  SETUP_TDBG("pcoa_fsvd_inplace_fp32")
   skbb::InPlaceCentered<float> cobj(mat);
   pcoa_T(n_dims, mat, cobj, n_eighs, seed, eigenvalues, samples, proportion_explained);
+  TDBG_STEP("pcoa")
 }
 

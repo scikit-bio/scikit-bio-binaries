@@ -135,7 +135,7 @@ endif
 
 SKBB_OBJS += dist_permanova.o
 
-dist_permanova.o: distance/permanova.cpp distance/permanova.hpp distance/permanova_dyn.hpp util/skbb_accapi.hpp util/skbb_detect_acc.hpp util/rand.hpp
+dist_permanova.o: distance/permanova.cpp distance/permanova.hpp distance/permanova_dyn.hpp util/skbb_accapi.hpp util/skbb_detect_acc.hpp util/rand.hpp util/skbb_dgb_info.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 
@@ -227,7 +227,7 @@ endif
 
 SKBB_OBJS += ord_pcoa.o
 
-ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_coordinate_analysis.hpp
+ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_coordinate_analysis.hpp util/skbb_dgb_info.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 ##

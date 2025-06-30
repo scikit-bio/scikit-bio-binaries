@@ -92,6 +92,15 @@ To check which binary is used (scikit-bio-binaries will print it to standard out
 
     export SKBB_CPU_INFO=Y
 
+Additional timing information
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When evaluating the performance of scikit-bio-binaries it is sometimes necessary to distinguish
+the time spent interacting with the data from the compute proper.
+Additional informational messages can be enabled by setting::
+
+    export SKBB_TIMING_INFO=Y
+
 Adoption
 --------
 
