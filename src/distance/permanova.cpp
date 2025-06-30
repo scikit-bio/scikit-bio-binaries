@@ -13,6 +13,7 @@
  */
 
 #include "distance/permanova.hpp"
+#include "util/skbb_dgb_info.hpp"
 #include "util/skbb_detect_acc.hpp"
 
 #define SKBB_ACC_NM  skbb_cpu
@@ -71,6 +72,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
                                    const uint32_t n_perm,
 				   const int seed,
                                    TFloat *permutted_sWs) {
+  SETUP_TDBG("permanova_perm_fp_sW")
 #if defined(SKBB_ENABLE_ACC_NV) || defined(SKBB_ENABLE_ACC_AMD)
   // There is acc-specific logic here, initialize skbio_use_acc ASAP
   auto use_acc = skbb::check_use_acc();
@@ -131,6 +133,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
   }
 #endif
 
+  TDBG_STEP("initialize")
   // now permute and compute sWs
   for (uint32_t tp=0; tp < (n_perm+1); tp+=step_perms) {
       const uint32_t max_p = std::min(tp+step_perms,n_perm+1);
@@ -199,7 +202,9 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
                                          permutted_sWs+tp);
        }
       }
+
   }
+  TDBG_STEP("pmn_f_stat_sW")
 
 #if defined(SKBB_ENABLE_ACC_NV)
   if (use_acc==skbb::ACC_NV) {
@@ -218,6 +223,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
 
   delete[] inv_group_sizes;
   delete[] permutted_groupings;
+  TDBG_STEP("finalize")
 }
 
 // Compute the square sum of the upper triangle
@@ -323,8 +329,10 @@ void skbb::permanova(unsigned int n_dims,
                    unsigned int n_perm,
                    int seed,
                    double &fstat_out, double &pvalue_out) {
+  SETUP_TDBG("permanova_fp64")
   permanova_T<double>(n_dims, mat, grouping, n_perm, seed,
                       fstat_out, pvalue_out);
+  TDBG_STEP("permanova")
 }
 
 void skbb::permanova(unsigned int n_dims,
@@ -333,7 +341,9 @@ void skbb::permanova(unsigned int n_dims,
                    unsigned int n_perm,
                    int seed,
                    float &fstat_out, float &pvalue_out) {
+  SETUP_TDBG("permanova_fp32")
   permanova_T<float>(n_dims, mat, grouping, n_perm, seed,
                      fstat_out, pvalue_out);
+  TDBG_STEP("permanova")
 }
 
