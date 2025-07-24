@@ -51,9 +51,20 @@ ifeq ($(ARCH),x86_64)
   endif
 endif
 
-CXXFLAGS += -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
-NV_CXXFLAGS += -std=c++17 -I. $(OPT) -fPIC
-AMD_CXXFLAGS += -std=c++17 -I. $(OPT) -fPIC
+CXXFLAGS += -O3 -ffast-math -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
+
+ifneq ($(AMD_CXX),)
+  ifneq ($(SKBB_ENABLE_ACC_AMD),)
+    SKBB_ENABLE_ACC_AMD_BINS := 1
+    AMD_CXXFLAGS += -fopenmp -fopenmp-offload-mandatory -DOMPGPU=1
+    AMD_CXXFLAGS += -O3 -ffast-math -std=c++17 -I. $(OPT) -fPIC
+    AMD_LDFLAGS += -shared -fopenmp
+    AMD_CXXFLAGS += --offload-arch=gfx1100,gfx1101,gfx1102,gfx1103,gfx1030,gfx1031,gfx90a,gfx942
+    AMD_LDFLAGS += --offload-arch=gfx1100,gfx1101,gfx1102,gfx1103,gfx1030,gfx1031,gfx90a,gfx942
+  endif
+endif
+
+NV_CXXFLAGS += -O3 -std=c++17 -I. $(OPT) -fPIC
 
 clean:
 	# all source files are in subdirectories
@@ -125,7 +136,7 @@ skbb_accapi_acc_amd.cpp: util/skbb_accapi_impl.hpp skbb_accapi_dyn_acc_amd.h
 skbb_accapi_acc_amd.o: skbb_accapi_acc_amd.cpp util/skbb_accapi.hpp skbb_accapi_dyn_acc_amd.h
 	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_amd -c $< -o $@
 
-skbb_accapi_dyn_acc_amd.o: skbb_accapi_dyn_acc_amd.cpp skbb_accapi_dyn_acc_amd.h skbb_task_impl.hpp
+skbb_accapi_dyn_acc_amd.o: skbb_accapi_dyn_acc_amd.cpp skbb_accapi_dyn_acc_amd.h skbb_accapi_dyn_acc_amd.h
 	$(AMD_CXX) $(AMD_CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_amd -c $< -o $@
 
 endif
@@ -246,7 +257,7 @@ skbb_extern_ordination.o: extern/skbb_ordination.cpp extern/ordination.h ordinat
 
 ##
 
-api: libskbb.so
+SKBB_SHLIBS := libskbb.so
 
 libskbb.so: $(SHBB_EXTERN_OBJS) libskbb_cpu.a
 	$(CXX) $(SO_LDDFLAGS) -o $@ $(SHBB_EXTERN_OBJS) libskbb_cpu.a $(BLASLIB)
@@ -254,16 +265,28 @@ libskbb.so: $(SHBB_EXTERN_OBJS) libskbb_cpu.a
 libskbb_cpu.a: $(SKBB_OBJS)
 	ar -rc $@ $(SKBB_OBJS)
 
+ifdef SKBB_ENABLE_ACC_AMD_BINS
+
+SKBB_SHLIBS += libskbb_acc_amd.so
+
+libskbb_acc_amd.so: skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
+	$(AMD_CXX) $(AMD_LDFLAGS) -o $@ skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
+
+endif
+
+api: $(SKBB_SHLIBS)
+
 ##
 
 install:
 	mkdir -p "${PREFIX}/lib"
 	mkdir -p "${PREFIX}/include/scikit-bio-binaries"
-	rm -f "${PREFIX}/lib/libskbb.so"; cp "libskbb.so" "${PREFIX}/lib/"
+	for f in $(SKBB_SHLIBS); do rm -f "${PREFIX}/lib/$${f}"; cp "$${f}" "${PREFIX}/lib/"; done
 	for f in $(SHBB_EXTERN_HS); do rm -f "${PREFIX}/include/scikit-bio-binaries/$${f}"; cp "extern/$${f}" "${PREFIX}/include/scikit-bio-binaries/"; done
 
 clean_install:
 	rm -f "${PREFIX}/lib/libskbb.so"
+	for f in $(SKBB_SHLIBS); do rm -f "${PREFIX}/lib/$${f}"; done
 	for f in $(SHBB_EXTERN_HS); do rm -f "${PREFIX}/include/scikit-bio-binaries/$${f}"; done
 
 ##
