@@ -150,7 +150,7 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
       }
       // now call the actual permanova
       if (false) {
-#if defined(UNIFRAC_ENABLE_ACC_NV)
+#if defined(SKBB_ENABLE_ACC_NV)
       } else if (use_acc==skbb::ACC_NV) {
         skbb_acc_nv::pmn_f_stat_sW<TFloat>(n_dims,
                                          mat,
@@ -159,9 +159,9 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
                                          inv_group_sizes,
                                          permutted_sWs+tp);
 #endif
-#if defined(UNIFRAC_ENABLE_ACC_AMD)
+#if defined(SKBB_ENABLE_ACC_AMD)
       } else if (use_acc==skbb::ACC_AMD) {
-        skbb_acc_amd::pmn_f_stat_sW<TFloat>(n_dims, mat,
+        skbb_acc_amd::pmn_f_stat_sW<TFloat>(n_dims,
                                          mat,
 					 max_p-tp,
                                          permutted_groupings,
