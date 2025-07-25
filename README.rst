@@ -42,6 +42,17 @@ To test that the build succeeded, run::
 
     make test
 
+GPU support
+~~~~~~~~~~~~~~~~~~
+
+To build NVIDIA-GPU-enabled code, you will need the [NVIDIA HPC SDK](https://developer.nvidia.com/hpc-sdk) compiler, and is only supported on Linux.
+The NVIDIA GPU compilation requires the setting of the `NV_CXX` environment variable (also avaialble as part of the `scripts/enable_nv_compiler.sh` script).
+
+To build AMD-GPU-enabled code, you will need the [AOMP clang](https://github.com/ROCm/aomp) compiler, and is only supported on Linux.
+The AMD GPU compilation requires the setting of the `AMD_CXX` environment variable (also avaialble as part of the `scripts/enable_amd_compiler.sh` script).
+
+
+
 Provided files and their usage
 ------------------------------
 
