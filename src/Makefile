@@ -53,6 +53,17 @@ endif
 
 CXXFLAGS += -O3 -ffast-math -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
 
+ifneq ($(NV_CXX),)
+  ifneq ($(SKBB_ENABLE_ACC_NV),)
+    SKBB_ENABLE_ACC_NV_BINS := 1
+    NV_CXXFLAGS += -acc
+    NV_CXXFLAGS += -Ofast -std=c++17 -I. $(OPT) -fPIC
+    NV_LDFLAGS += -shared -acc -Bstatic_pgi
+    NV_CXXFLAGS += -gpu=ccall
+    NV_LDFLAGS += -gpu=ccall
+  endif
+endif
+
 ifneq ($(AMD_CXX),)
   ifneq ($(SKBB_ENABLE_ACC_AMD),)
     SKBB_ENABLE_ACC_AMD_BINS := 1
@@ -64,7 +75,6 @@ ifneq ($(AMD_CXX),)
   endif
 endif
 
-NV_CXXFLAGS += -O3 -std=c++17 -I. $(OPT) -fPIC
 
 clean:
 	# all source files are in subdirectories
@@ -118,7 +128,7 @@ skbb_accapi_acc_nv.cpp: util/skbb_accapi_impl.hpp skbb_accapi_dyn_acc_nv.h
 skbb_accapi_acc_nv.o: skbb_accapi_acc_nv.cpp util/skbb_accapi.hpp skbb_accapi_dyn_acc_nv.h
 	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_nv -c $< -o $@
 
-skbb_accapi_dyn_acc_nv.o: skbb_accapi_dyn_acc_nv.cpp skbb_accapi_dyn_acc_nv.h skbb_task_impl.hpp
+skbb_accapi_dyn_acc_nv.o: skbb_accapi_dyn_acc_nv.cpp skbb_accapi_dyn_acc_nv.h skbb_accapi_dyn_acc_nv.h
 	$(NV_CXX) $(NV_CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_nv -c $< -o $@
 
 endif
@@ -264,6 +274,15 @@ libskbb.so: $(SHBB_EXTERN_OBJS) libskbb_cpu.a
 
 libskbb_cpu.a: $(SKBB_OBJS)
 	ar -rc $@ $(SKBB_OBJS)
+
+ifdef SKBB_ENABLE_ACC_NV_BINS
+
+SKBB_SHLIBS += libskbb_acc_nv.so
+
+libskbb_acc_nv.so: skbb_accapi_dyn_acc_nv.o permanova_dyn_acc_nv.o
+	$(NV_CXX) $(NV_LDFLAGS) $(SO_LDDFLAGS) -o $@ skbb_accapi_dyn_acc_nv.o permanova_dyn_acc_nv.o
+
+endif
 
 ifdef SKBB_ENABLE_ACC_AMD_BINS
 
