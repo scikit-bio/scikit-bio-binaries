@@ -42,6 +42,15 @@ To test that the build succeeded, run::
 
     make test
 
+GPU support
+~~~~~~~~~~~
+
+To build NVIDIA-GPU-enabled code, you will need the `NVIDIA HPC SDK <https://developer.nvidia.com/hpc-sdk>`_ compiler, and is only supported on Linux.
+The NVIDIA GPU compilation requires the setting of the ``NV_CXX`` environment variable (also avaialble as part of the `<scripts/enable_nv_compiler.sh>`_ script).
+
+To build AMD-GPU-enabled code, you will need the `AOMP clang <https://github.com/ROCm/aomp>`_ compiler, and is only supported on Linux.
+The AMD GPU compilation requires the setting of the ``AMD_CXX`` environment variable (also avaialble as part of the `<scripts/enable_amd_compiler.sh>`_ script).
+
 Provided files and their usage
 ------------------------------
 
@@ -91,6 +100,19 @@ To force the most compatible binary variant, one can set::
 To check which binary is used (scikit-bio-binaries will print it to standard output at runtime), set::
 
     export SKBB_CPU_INFO=Y
+
+GPU support
+~~~~~~~~~~~
+
+If the code has been compiled for GPUs, scikit-bio-binaries will auto-detect the presence
+of either NVIDIA or AMD GPUs, and use such a GPU for the GPU-enabled algorithms.
+To force CPU-only compute, one can set::
+
+    export SKBB_USE_GPU=N
+
+To check if a GPU is used (scikit-bio-binaries will print it to standard output at runtime), set::
+
+    export SKBB_GPU_INFO=Y
 
 Additional timing information
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
