@@ -270,7 +270,7 @@ ifdef SKBB_ENABLE_ACC_AMD_BINS
 SKBB_SHLIBS += libskbb_acc_amd.so
 
 libskbb_acc_amd.so: skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
-	$(AMD_CXX) $(AMD_LDFLAGS) -o $@ skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
+	$(AMD_CXX) $(AMD_LDFLAGS) $(SO_LDDFLAGS) -o $@ skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
 
 endif
 
