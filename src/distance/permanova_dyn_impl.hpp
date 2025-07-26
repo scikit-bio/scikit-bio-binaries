@@ -55,44 +55,6 @@ static inline int pmn_get_max_parallelism_T() {
 // mat is symmetric matrix of size n_dims x in_n
 // grouping is an array of size in_n
 // inv_group_sizes is an array of size maxel(grouping)
-template<class TFloat>
-static inline TFloat pmn_f_stat_sW_one(
-		const uint32_t n_dims,
-		const TFloat * mat,
-		const uint32_t *grouping,
-		const TFloat *inv_group_sizes) {
-  // Use full precision for intermediate compute, to minimize accumulation errors
-  double s_W = 0.0;
-
-  constexpr uint32_t TILE = 128;  // 128 is big enough to speed up the code, without cache trashing
-
-  for (uint32_t trow=0; trow < (n_dims-1); trow+=TILE) {   // no columns in last row
-    for (uint32_t tcol=trow+1; tcol < n_dims; tcol+=TILE) { // diagonal is always zero
-      const uint32_t max_row = std::min(trow+TILE,n_dims-1);
-      const uint32_t max_col = std::min(tcol+TILE,n_dims);
-
-      for (uint32_t row=trow; row < max_row; row++) {
-        const uint32_t min_col = std::max(tcol,row+1);
-        uint32_t group_idx = grouping[row];
-
-        // Use full precision for intermediate compute, to minimize accumulation errors
-        double local_s_W = 0.0;
-        const TFloat * mat_row = mat + uint64_t(row)*uint64_t(n_dims);
-        for (uint32_t col=min_col; col < max_col; col++) {
-            if (grouping[col] == group_idx) {
-                TFloat val = mat_row[col];  // mat[row,col];
-                local_s_W += val * val;
-            }
-        }
-        s_W += local_s_W*inv_group_sizes[group_idx];
-      }
-    }
-  }
-
-  return s_W;
-}
-
-// 8-at-a-time version, to minimize memory reads while still fitting in registers
 template<class TFloat, int NBLOCK>
 static inline void pmn_f_stat_sW_block(
 		const uint32_t n_dims,
@@ -156,22 +118,54 @@ static inline void pmn_f_stat_sW_cpu(
 // CPU version, call function
 #pragma omp parallel for
  for (uint32_t gblock=0; gblock < n_grouping_dims; gblock+=NBLOCK) {
+    const uint32_t *grouping_arr[NBLOCK];
+    for (int i=0; i<NBLOCK; i++) grouping_arr[i] = groupings + uint64_t(gblock+i)*uint64_t(n_dims);
     if ((gblock+(NBLOCK-1))<n_grouping_dims) {
       // can process multiple permutations per pass
       const uint32_t grouping_el = gblock;
-      const uint32_t *grouping_arr[NBLOCK];
-      for (int i=0; i<NBLOCK; i++) grouping_arr[i] = groupings + uint64_t(grouping_el+i)*uint64_t(n_dims);
       pmn_f_stat_sW_block<TFloat,NBLOCK>(n_dims,mat,
 		    grouping_arr,
 		    inv_group_sizes,
 		    group_sWs+grouping_el);
     } else {
-      // just do one at a time
-      for (uint32_t grouping_el=gblock; grouping_el < n_grouping_dims; grouping_el++) {
-        const uint32_t *grouping = groupings + uint64_t(grouping_el)*uint64_t(n_dims);
-        group_sWs[grouping_el] = pmn_f_stat_sW_one<TFloat>(n_dims,mat,grouping,inv_group_sizes);
+      uint32_t gblock2=gblock;
+      // Note: if we ever change NBLOCK, we need to update this logic, too
+      if ((gblock2+(8-1))<n_grouping_dims) {
+        // can process multiple permutations per pass
+        const uint32_t grouping_el = gblock2;
+        pmn_f_stat_sW_block<TFloat,8>(n_dims,mat,
+		    grouping_arr,
+		    inv_group_sizes,
+		    group_sWs+grouping_el);
+        gblock2+=8;
       }
-    }
+      if ((gblock2+(4-1))<n_grouping_dims) {
+        // can process multiple permutations per pass
+        const uint32_t grouping_el = gblock2;
+        pmn_f_stat_sW_block<TFloat,4>(n_dims,mat,
+		    grouping_arr,
+		    inv_group_sizes,
+		    group_sWs+grouping_el);
+        gblock2+=4;
+      }
+      if ((gblock2+(2-1))<n_grouping_dims) {
+        // can process multiple permutations per pass
+        const uint32_t grouping_el = gblock2;
+        pmn_f_stat_sW_block<TFloat,2>(n_dims,mat,
+		    grouping_arr,
+		    inv_group_sizes,
+		    group_sWs+grouping_el);
+        gblock2+=2;
+      }
+      if (gblock2<n_grouping_dims) {
+        // can process multiple permutations per pass
+        const uint32_t grouping_el = gblock2;
+        pmn_f_stat_sW_block<TFloat,1>(n_dims,mat,
+		    grouping_arr,
+		    inv_group_sizes,
+		    group_sWs+grouping_el);
+      }
+    } // if can use big block
  } 
 }
 
