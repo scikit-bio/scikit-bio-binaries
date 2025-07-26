@@ -36,8 +36,8 @@ static inline int pmn_get_max_parallelism_T() {
 #if !(defined(_OPENACC) || defined(OMPGPU))
   // No good reason to do more than max threads
   // (but use 2x to reduce thread spawning overhead)
-  // but we do use 4x blocking, so account for that, too
-  return 2*omp_get_max_threads()*4;
+  // but we do use 16x blocking, so account for that, too
+  return 2*omp_get_max_threads()*16;
 #else
   // 1k is enough for consumer-grade GPUs
   // 4k needed for larger GPUs
@@ -92,23 +92,17 @@ static inline TFloat pmn_f_stat_sW_one(
   return s_W;
 }
 
-
-// 4-at-a-time version, to minimize memory reads while still fitting in registers
-template<class TFloat>
-static inline void pmn_f_stat_sW_four(
+// 8-at-a-time version, to minimize memory reads while still fitting in registers
+template<class TFloat, int NBLOCK>
+static inline void pmn_f_stat_sW_block(
 		const uint32_t n_dims,
 		const TFloat * mat,
-		const uint32_t *grouping0,
-		const uint32_t *grouping1,
-		const uint32_t *grouping2,
-		const uint32_t *grouping3,
+		const uint32_t *grouping_arr[],
 		const TFloat *inv_group_sizes,
-		TFloat& out_sW0, TFloat& out_sW1, TFloat& out_sW2, TFloat& out_sW3) {
+		TFloat out_sW_arr[]) {
   // Use full precision for intermediate compute, to minimize accumulation errors
-  double s_W0 = 0.0;
-  double s_W1 = 0.0;
-  double s_W2 = 0.0;
-  double s_W3 = 0.0;
+  double s_W[NBLOCK];
+  for (int i=0; i<NBLOCK; i++) s_W[i] = 0.0;
 
   constexpr uint32_t TILE = 128;  // 128 is big enough to speed up the code, without cache trashing
 
@@ -119,47 +113,26 @@ static inline void pmn_f_stat_sW_four(
 
       for (uint32_t row=trow; row < max_row; row++) {
         const uint32_t min_col = std::max(tcol,row+1);
-        uint32_t group_idx0 = grouping0[row];
-        uint32_t group_idx1 = grouping1[row];
-        uint32_t group_idx2 = grouping2[row];
-        uint32_t group_idx3 = grouping3[row];
+        uint32_t group_idx[NBLOCK];
+	for (int i=0; i<NBLOCK; i++) group_idx[i] = grouping_arr[i][row];
 
         // Use full precision for intermediate compute, to minimize accumulation errors
-        double local_s_W0 = 0.0;
-        double local_s_W1 = 0.0;
-        double local_s_W2 = 0.0;
-        double local_s_W3 = 0.0;
+        double local_s_W[NBLOCK];
+        for (int i=0; i<NBLOCK; i++) local_s_W[i] = 0.0;
         const TFloat * mat_row = mat + uint64_t(row)*uint64_t(n_dims);
         for (uint32_t col=min_col; col < max_col; col++) {
 	    // speculatively read, we will likely use it at least in one of the ifs
 	    // small penalty if we mis-predicted, no effect on semantics
             TFloat val = mat_row[col];  // mat[row,col];
 	    val = val*val;
-            if (grouping0[col] == group_idx0) {
-                local_s_W0 += val;
-            }
-            if (grouping1[col] == group_idx1) {
-                local_s_W1 += val;
-            }
-            if (grouping2[col] == group_idx2) {
-                local_s_W2 += val;
-            }
-            if (grouping3[col] == group_idx3) {
-                local_s_W3 += val;
-            }
+	    for (int i=0; i<NBLOCK; i++) if (grouping_arr[i][col] == group_idx[i]) local_s_W[i] += val;
         }
-        s_W0 += local_s_W0*inv_group_sizes[group_idx0];
-        s_W1 += local_s_W1*inv_group_sizes[group_idx1];
-        s_W2 += local_s_W2*inv_group_sizes[group_idx2];
-        s_W3 += local_s_W3*inv_group_sizes[group_idx3];
+	for (int i=0; i<NBLOCK; i++) s_W[i] += local_s_W[i]*inv_group_sizes[group_idx[i]];
       }
     }
   }
 
-  out_sW0 = s_W0;
-  out_sW1 = s_W1;
-  out_sW2 = s_W2;
-  out_sW3 = s_W3;
+  for (int i=0; i<NBLOCK; i++) out_sW_arr[i] = s_W[i];
 }
 #endif
 
@@ -179,20 +152,19 @@ static inline void pmn_f_stat_sW_cpu(
 		const uint32_t *groupings,
 		const TFloat *inv_group_sizes,
 		TFloat *group_sWs) {
+ constexpr int NBLOCK = 16;
 // CPU version, call function
 #pragma omp parallel for
- for (uint32_t gblock=0; gblock < n_grouping_dims; gblock+=4) {
-    if ((gblock+3)<n_grouping_dims) {
+ for (uint32_t gblock=0; gblock < n_grouping_dims; gblock+=NBLOCK) {
+    if ((gblock+(NBLOCK-1))<n_grouping_dims) {
       // can process multiple permutations per pass
       const uint32_t grouping_el = gblock;
-      const uint32_t *grouping0 = groupings + uint64_t(grouping_el)*uint64_t(n_dims);
-      const uint32_t *grouping1 = groupings + uint64_t(grouping_el+1)*uint64_t(n_dims);
-      const uint32_t *grouping2 = groupings + uint64_t(grouping_el+2)*uint64_t(n_dims);
-      const uint32_t *grouping3 = groupings + uint64_t(grouping_el+3)*uint64_t(n_dims);
-      pmn_f_stat_sW_four(n_dims,mat,
-		    grouping0, grouping1, grouping2, grouping3,
+      const uint32_t *grouping_arr[NBLOCK];
+      for (int i=0; i<NBLOCK; i++) grouping_arr[i] = groupings + uint64_t(grouping_el+i)*uint64_t(n_dims);
+      pmn_f_stat_sW_block<TFloat,NBLOCK>(n_dims,mat,
+		    grouping_arr,
 		    inv_group_sizes,
-		    group_sWs[grouping_el], group_sWs[grouping_el+1], group_sWs[grouping_el+2], group_sWs[grouping_el+3]);
+		    group_sWs+grouping_el);
     } else {
       // just do one at a time
       for (uint32_t grouping_el=gblock; grouping_el < n_grouping_dims; grouping_el++) {
