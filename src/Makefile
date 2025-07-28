@@ -53,14 +53,25 @@ endif
 
 CXXFLAGS += -O3 -ffast-math -fopenmp -Wall -std=c++17 -pedantic -I. $(OPT) -fPIC
 
-ifneq ($(NV_CXX),)
-  ifneq ($(SKBB_ENABLE_ACC_NV),)
+ifneq ($(SKBB_ENABLE_ACC_NV),)
+  ifneq ($(NV_CUDA),)
+    # CUDA version
     SKBB_ENABLE_ACC_NV_BINS := 1
-    NV_CXXFLAGS += -acc
-    NV_CXXFLAGS += -Ofast -std=c++17 -I. $(OPT) -fPIC
-    NV_LDFLAGS += -shared -acc -Bstatic_pgi
-    NV_CXXFLAGS += -gpu=ccall
-    NV_LDFLAGS += -gpu=ccall
+    NV_CXX := nvcc
+    NV_CXXFLAGS := -DCUDA
+    NV_CXXFLAGS += -O3 --use_fast_math -std=c++17 -I. $(OPT) -Xcompiler -fPIC
+    NV_CXXFLAGS += -arch=all-major
+  else
+    ifneq ($(NV_CXX),)
+     # OpenACC version
+     SKBB_ENABLE_ACC_NV_BINS := 1
+     NV_CXXFLAGS += -acc
+     NV_CXXFLAGS += -Ofast -std=c++17 -I. $(OPT) -fPIC
+     NV_LDFLAGS += -shared -acc -Bstatic_pgi
+     NV_CXXFLAGS += -gpu=ccall
+     NV_LDFLAGS += -gpu=ccall
+  endif
+
   endif
 endif
 
@@ -78,7 +89,7 @@ endif
 
 clean:
 	# all source files are in subdirectories
-	rm -f *.cpp *.hpp *.h
+	rm -f *.cpp *.hpp *.h *.cu
 	rm -f *.o *.so *.a *.exe
 
 ##
@@ -206,16 +217,27 @@ SKBB_OBJS += permanova_acc_nv.o
 
 permanova_dyn_acc_nv.h: distance/permanova_dyn_impl.hpp
 	./tools/generate_permanova_dyn.py acc_nv api_h > $@
-permanova_dyn_acc_nv.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_nv.h
-	./tools/generate_permanova_dyn.py acc_nv api > $@
 permanova_acc_nv.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_nv.h
 	./tools/generate_permanova_dyn.py acc_nv indirect > $@
 
 permanova_acc_nv.o: permanova_acc_nv.cpp permanova_dyn_acc_nv.h distance/permanova_dyn.hpp util/skbb_dl.cpp
 	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_nv -c $< -o $@
 
+ifneq ($(NV_CUDA),)
+# CUDA version
+permanova_dyn_acc_nv.cu: distance/permanova_dyn_impl.hpp permanova_dyn_acc_nv.h
+	./tools/generate_permanova_dyn.py acc_nv api > $@
+permanova_dyn_acc_nv.o: permanova_dyn_acc_nv.cu distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
+	$(NV_CXX) $(NV_CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_nv -c $< -o $@
+
+else
+# OpenACC version
+permanova_dyn_acc_nv.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_nv.h
+	./tools/generate_permanova_dyn.py acc_nv api > $@
 permanova_dyn_acc_nv.o: permanova_dyn_acc_nv.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
 	$(NV_CXX) $(NV_CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_nv -c $< -o $@
+
+endif
 
 endif
 
@@ -279,8 +301,15 @@ ifdef SKBB_ENABLE_ACC_NV_BINS
 
 SKBB_SHLIBS += libskbb_acc_nv.so
 
+ifneq ($(NV_CUDA),)
+#CUDA version
+libskbb_acc_nv.so: skbb_accapi_dyn_acc_nv.o permanova_dyn_acc_nv.o
+	$(CXX) $(SO_LDDFLAGS) -o $@ skbb_accapi_dyn_acc_nv.o permanova_dyn_acc_nv.o -lcudart_static
+else
+#OpenACC version
 libskbb_acc_nv.so: skbb_accapi_dyn_acc_nv.o permanova_dyn_acc_nv.o
 	$(NV_CXX) $(NV_LDFLAGS) $(SO_LDDFLAGS) -o $@ skbb_accapi_dyn_acc_nv.o permanova_dyn_acc_nv.o
+endif
 
 endif
 

@@ -37,26 +37,28 @@ namespace SKBB_ACC_NM {
 
     // create the equivalent buffer in the device memory space, if partitioned
     // the content in undefined
+    // Use buf_device from now on
     template<class T>
-    void acc_create_buf(T *buf, uint64_t start, uint64_t end);
+    void acc_create_buf(T *buf_host, T **buf_device, uint64_t size);
 
     // create the equivalent buffer in the device memory space, if partitioned
     // also copy the buffer over
+    // Use buf_device from now on
     template<class T>
-    void acc_copyin_buf(T *buf, uint64_t start, uint64_t end);
+    void acc_copyin_buf(T *buf_host, T **buf_device, uint64_t size);
 
     // make a copy from host to device buffer, if partitioned
     template<class T>
-    void acc_update_device(T *buf, uint64_t start, uint64_t end);
+    void acc_update_device(T *buf_host, T *buf_device, uint64_t start, uint64_t end);
 
     // make a copy from device to host buffer, if partitioned
     // destroy the equivalent buffer in the device memory space, if partitioned
     template<class T>
-    void acc_copyout_buf(T *buf, uint64_t start, uint64_t end);
+    void acc_copyout_buf(T *buf_host, T *buf_device, uint64_t size);
 
     // destroy the equivalent buffer in the device memory space, if partitioned
     template<class T>
-    void acc_destroy_buf(T *buf, uint64_t start, uint64_t end);
+    void acc_destroy_buf(T *buf_device, uint64_t size);
 
 }
 

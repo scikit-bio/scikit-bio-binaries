@@ -104,7 +104,7 @@ static inline void pmn_f_stat_sW_block(
 // inv_group_sizes is an array of size maxel(groupings)
 // Results in group_sWs, and array of size n_grouping_dims
 
-#if !(defined(_OPENACC) || defined(OMPGPU))
+#if !(defined(_OPENACC) || defined(OMPGPU) || defined(CUDA))
 
 template<class TFloat>
 static inline void pmn_f_stat_sW_cpu(
@@ -169,6 +169,79 @@ static inline void pmn_f_stat_sW_cpu(
  } 
 }
 
+#elif defined(CUDA)
+
+template<class TFloat>
+__global__ void pmn_f_stat_sW_cuda_one(
+		const uint32_t n_dims,
+		const TFloat * mat,
+		const uint32_t n_grouping_dims,
+		const uint32_t *groupings,
+		const TFloat *inv_group_sizes,
+		TFloat *group_sWs) {
+    const uint32_t grouping_el = blockIdx.x;
+    const uint32_t icol = threadIdx.x;
+    const uint32_t col_stride = blockDim.x;
+    __shared__ double s_W_arr[128]; // we will not have more than 128 threads
+
+    const uint32_t *grouping = groupings + uint64_t(grouping_el)*uint64_t(n_dims);
+    // Use full precision for intermediate compute, to minimize accumulation errors
+    double s_W = 0.0;
+    for (uint32_t row=0; row < (n_dims-1); row++) {   // no columns in last row
+      const TFloat * mat_row = mat + uint64_t(row)*uint64_t(n_dims);
+      uint32_t group_idx = grouping[row];
+      double local_s_W = 0.0;
+      for (uint32_t col=icol+row+1; col < n_dims; col+=col_stride) { // diagonal is always zero
+        if (grouping[col] == group_idx) {
+            TFloat val = mat_row[col];  // mat[row,col];
+            local_s_W += val * val;
+        }
+      }
+      s_W += local_s_W * inv_group_sizes[group_idx];
+    }
+    // now we need to collect data from all the threads
+    s_W_arr[icol] = s_W;
+    __syncthreads();
+    // first sum across workers (4*32)
+    if (threadIdx.x<32) {
+      s_W = 0.0;
+      for (uint32_t t=threadIdx.x; t < blockDim.x; t+=32) {
+        s_W += s_W_arr[t]; 
+      }
+      s_W_arr[threadIdx.x] = s_W;
+    }
+    __syncthreads();
+    // then sum using partial warps (4*8)
+    if (threadIdx.x<8) {
+      s_W = 0.0;
+      for (uint32_t t=threadIdx.x; t < 32; t+=8) {
+        s_W += s_W_arr[t]; 
+      }
+      s_W_arr[threadIdx.x] = s_W;
+    }
+    __syncthreads();
+    // finally sum the remainder and write to global memory
+    if (threadIdx.x==0) {
+      s_W = 0.0;
+      for (uint32_t t=threadIdx.x; t < 8; t++) {
+        s_W += s_W_arr[t]; 
+      }
+      group_sWs[grouping_el] = s_W;
+    }
+}
+
+template<class TFloat>
+static inline void pmn_f_stat_sW_cuda(
+		const uint32_t n_dims,
+		const TFloat * mat,
+		const uint32_t n_grouping_dims,
+		const uint32_t *groupings,
+		const TFloat *inv_group_sizes,
+		TFloat *group_sWs) {
+  pmn_f_stat_sW_cuda_one<TFloat><<<n_grouping_dims,128>>>(n_dims,mat,n_grouping_dims,groupings,inv_group_sizes,group_sWs);
+//map(to:groupings[0:groupings_size]) map(from:group_sWs[0:n_grouping_dims])
+  cudaDeviceSynchronize();
+}
 #else
 
 template<class TFloat>
@@ -218,8 +291,10 @@ static inline void pmn_f_stat_sW_T(
 		const uint32_t *groupings,
 		const TFloat *inv_group_sizes,
 		TFloat *group_sWs) {
-#if !(defined(_OPENACC) || defined(OMPGPU))
+#if !(defined(_OPENACC) || defined(OMPGPU) || defined(CUDA))
   pmn_f_stat_sW_cpu(n_dims, mat, n_grouping_dims, groupings, inv_group_sizes, group_sWs);
+#elif defined(CUDA)
+  pmn_f_stat_sW_cuda(n_dims, mat, n_grouping_dims, groupings, inv_group_sizes, group_sWs);
 #else
   pmn_f_stat_sW_gpu(n_dims, mat, n_grouping_dims, groupings, inv_group_sizes, group_sWs);
 #endif

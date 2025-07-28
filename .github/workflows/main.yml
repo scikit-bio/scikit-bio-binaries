@@ -29,7 +29,16 @@ jobs:
         echo "Conda platform: ${cplatform}"
         if [[ "$(uname -s)" == "Linux" ]];
         then
-          conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda gxx_${cplatform}
+          if [[ "${cplatform}" == "linux-64" ]];
+          then
+            # only do GPU compute on x86 platforms for now
+            echo "Enabling GPU build"
+            # cuda-compiler and gxx must match
+            conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda gxx_${cplatform} cuda-compiler
+            export NV_CUDA=Y
+          else
+            conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda gxx_${cplatform}
+          fi
         else
           conda create -q --yes --strict-channel-priority -n skbb-build -c conda-forge -c bioconda clangxx_${cplatform}
         fi 

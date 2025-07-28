@@ -45,11 +45,15 @@ To test that the build succeeded, run::
 GPU support
 ~~~~~~~~~~~
 
-To build NVIDIA-GPU-enabled code, you will need the `NVIDIA HPC SDK <https://developer.nvidia.com/hpc-sdk>`_ compiler, and is only supported on Linux.
-The NVIDIA GPU compilation requires the setting of the ``NV_CXX`` environment variable (also avaialble as part of the `<scripts/enable_nv_compiler.sh>`_ script).
+To build NVIDIA-GPU-enabled code, you will also need the CUDA compiler. On Linux, you can install it from conda with::
 
-To build AMD-GPU-enabled code, you will need the `AOMP clang <https://github.com/ROCm/aomp>`_ compiler, and is only supported on Linux.
-The AMD GPU compilation requires the setting of the ``AMD_CXX`` environment variable (also avaialble as part of the `<scripts/enable_amd_compiler.sh>`_ script).
+    conda install -c conda-forge cuda-compiler
+
+The CUDA build is not enabled by default. If you are interested in building the GPU-accelerated libraries, set::
+
+    export NV_CUDA=Y
+
+There is also support for OpenMP Offload and OpenACC builds, by setting either ``AMD_CXX`` or ``NV_CXX``, but it is still experimental.
 
 Provided files and their usage
 ------------------------------
@@ -57,6 +61,10 @@ Provided files and their usage
 The functions provided by scikit-bio-binaries are packaged as a shared library and will be installed in::
 
     $CONDA_PREFIX/lib/libskbb.so
+
+If GPU code was build, you will also have::
+
+    $CONDA_PREFIX/lib/libskbb_acc_nv.so
 
 The C header files that describe how to access them are avaialable in `<src/extern/>`_, but will also be installed in::
 

@@ -118,18 +118,31 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
   }
 
   // for acc implementations, make a copy of mat into the GPU memory
+  // no copy by default
+  const TFloat* mat_device = mat;
+  TFloat *inv_group_sizes_device = inv_group_sizes;
+  uint32_t *permutted_groupings_device = permutted_groupings;
+  TFloat *permutted_sWs_device = permutted_sWs;
 #if defined(SKBB_ENABLE_ACC_NV)
   if (use_acc==skbb::ACC_NV) {
+    TFloat* mat_out = 0;
     // must remove const as it will indeed write to GPU memory
-    skbb_acc_nv::acc_copyin_buf(const_cast<TFloat*>(mat),0,mat_size);
-    skbb_acc_nv::acc_copyin_buf(inv_group_sizes,0,n_groups);
+    skbb_acc_nv::acc_copyin_buf(const_cast<TFloat*>(mat),&mat_out,mat_size);
+    mat_device = mat_out;
+    skbb_acc_nv::acc_copyin_buf(inv_group_sizes,&inv_group_sizes_device,n_groups);
+    skbb_acc_nv::acc_create_buf(permutted_groupings,&permutted_groupings_device,permutted_groupings_size);
+    skbb_acc_nv::acc_create_buf(permutted_sWs,&permutted_sWs_device,n_perm);
   }
 #endif
 #if defined(SKBB_ENABLE_ACC_AMD)
   if (use_acc==skbb::ACC_AMD) {
+    TFloat* mat_out = 0;
     // must remove const as it will indeed write to GPU memory
-    skbb_acc_amd::acc_copyin_buf(const_cast<TFloat*>(mat),0,mat_size);
-    skbb_acc_amd::acc_copyin_buf(inv_group_sizes,0,n_groups);
+    skbb_acc_amd::acc_copyin_buf(const_cast<TFloat*>(mat),&mat_out,mat_size);
+    mat_device = mat_out;
+    skbb_acc_amd::acc_copyin_buf(inv_group_sizes,&inv_group_sizes_device,n_groups);
+    skbb_acc_amd::acc_create_buf(permutted_groupings,&permutted_groupings_device,permutted_groupings_size);
+    skbb_acc_amd::acc_create_buf(permutted_sWs,&permutted_sWs_device,n_perm);
   }
 #endif
 
@@ -152,21 +165,23 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
       if (false) {
 #if defined(SKBB_ENABLE_ACC_NV)
       } else if (use_acc==skbb::ACC_NV) {
+        skbb_acc_nv::acc_update_device(permutted_groupings,permutted_groupings_device,0,permutted_groupings_size);
         skbb_acc_nv::pmn_f_stat_sW<TFloat>(n_dims,
-                                         mat,
+                                         mat_device,
 					 max_p-tp,
-                                         permutted_groupings,
-                                         inv_group_sizes,
-                                         permutted_sWs+tp);
+                                         permutted_groupings_device,
+                                         inv_group_sizes_device,
+                                         permutted_sWs_device+tp);
 #endif
 #if defined(SKBB_ENABLE_ACC_AMD)
       } else if (use_acc==skbb::ACC_AMD) {
+        skbb_acc_amd::acc_update_device(permutted_groupings,permutted_groupings_device,0,permutted_groupings_size);
         skbb_acc_amd::pmn_f_stat_sW<TFloat>(n_dims,
-                                         mat,
+                                         mat_device,
 					 max_p-tp,
-                                         permutted_groupings,
-                                         inv_group_sizes,
-                                         permutted_sWs+tp);
+                                         permutted_groupings_device,
+                                         inv_group_sizes_device,
+                                         permutted_sWs_device+tp);
 #endif
       } else {
        // as above, default to CPU
@@ -208,16 +223,20 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
 
 #if defined(SKBB_ENABLE_ACC_NV)
   if (use_acc==skbb::ACC_NV) {
-    skbb_acc_nv::acc_destroy_buf(inv_group_sizes,0,n_groups);
+    skbb_acc_nv::acc_copyout_buf(permutted_sWs,permutted_sWs_device,n_perm);
+    skbb_acc_nv::acc_destroy_buf(permutted_groupings_device,permutted_groupings_size);
+    skbb_acc_nv::acc_destroy_buf(inv_group_sizes_device,n_groups);
     // must remove const, as it will indeed destroy the copy in GPU memory
-    skbb_acc_nv::acc_destroy_buf(const_cast<TFloat*>(mat),0,mat_size);
+    skbb_acc_nv::acc_destroy_buf(const_cast<TFloat*>(mat_device),mat_size);
   }
 #endif
 #if defined(SKBB_ENABLE_ACC_AMD)
   if (use_acc==skbb::ACC_AMD) {
-    skbb_acc_amd::acc_destroy_buf(inv_group_sizes,0,n_groups);
+    skbb_acc_amd::acc_copyout_buf(permutted_sWs,permutted_sWs_device,n_perm);
+    skbb_acc_amd::acc_destroy_buf(permutted_groupings_device,permutted_groupings_size);
+    skbb_acc_amd::acc_destroy_buf(inv_group_sizes_device,n_groups);
     // must remove const, as it will indeed destroy the copy in GPU memory
-    skbb_acc_amd::acc_destroy_buf(const_cast<TFloat*>(mat),0,mat_size);
+    skbb_acc_amd::acc_destroy_buf(const_cast<TFloat*>(mat_device),mat_size);
   }
 #endif
 
