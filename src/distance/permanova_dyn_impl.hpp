@@ -22,7 +22,12 @@
 #include <cstdlib>
 #include <algorithm>
 
-#if !(defined(_OPENACC) || defined(OMPGPU))
+#if defined(CUDA)
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+#elif !(defined(_OPENACC) || defined(OMPGPU))
 
 #include <omp.h>
 
@@ -33,11 +38,22 @@
 #endif
 
 static inline int pmn_get_max_parallelism_T() {
-#if !(defined(_OPENACC) || defined(OMPGPU))
+#if defined(CUDA)
+  int deviceID;
+  cudaDeviceProp props;
+
+  cudaGetDevice(&deviceID);
+  cudaGetDeviceProperties(&props, deviceID);
+
+  // We want at least a few gangs per SM
+  return 4*props.multiProcessorCount;
+
+#elif !(defined(_OPENACC) || defined(OMPGPU))
   // No good reason to do more than max threads
   // (but use 2x to reduce thread spawning overhead)
   // but we do use 16x blocking, so account for that, too
   return 2*omp_get_max_threads()*16;
+
 #else
   // 1k is enough for consumer-grade GPUs
   // 4k needed for larger GPUs
@@ -261,7 +277,6 @@ static inline void pmn_f_stat_sW_cuda(
 		const TFloat *inv_group_sizes,
 		TFloat *group_sWs) {
   pmn_f_stat_sW_cuda_one<TFloat><<<n_grouping_dims,128>>>(n_dims,mat,n_grouping_dims,groupings,inv_group_sizes,group_sWs);
-//map(to:groupings[0:groupings_size]) map(from:group_sWs[0:n_grouping_dims])
   cudaDeviceSynchronize();
 }
 #else
