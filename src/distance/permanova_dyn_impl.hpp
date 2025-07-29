@@ -22,7 +22,12 @@
 #include <cstdlib>
 #include <algorithm>
 
-#if !(defined(_OPENACC) || defined(OMPGPU))
+#if defined(CUDA)
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+#elif !(defined(_OPENACC) || defined(OMPGPU))
 
 #include <omp.h>
 
@@ -33,11 +38,22 @@
 #endif
 
 static inline int pmn_get_max_parallelism_T() {
-#if !(defined(_OPENACC) || defined(OMPGPU))
+#if defined(CUDA)
+  int deviceID;
+  cudaDeviceProp props;
+
+  cudaGetDevice(&deviceID);
+  cudaGetDeviceProperties(&props, deviceID);
+
+  // We want at least a few gangs per SM
+  return 4*props.multiProcessorCount;
+
+#elif !(defined(_OPENACC) || defined(OMPGPU))
   // No good reason to do more than max threads
   // (but use 2x to reduce thread spawning overhead)
   // but we do use 16x blocking, so account for that, too
   return 2*omp_get_max_threads()*16;
+
 #else
   // 1k is enough for consumer-grade GPUs
   // 4k needed for larger GPUs
@@ -181,24 +197,46 @@ __global__ void pmn_f_stat_sW_cuda_one(
 		TFloat *group_sWs) {
     const uint32_t grouping_el = blockIdx.x;
     const uint32_t icol = threadIdx.x;
-    const uint32_t col_stride = blockDim.x;
+    const uint32_t TILE = blockDim.x;
     __shared__ double s_W_arr[128]; // we will not have more than 128 threads
+    __shared__ uint32_t row_grouping[128]; // we will not have more than 128 threads
 
     const uint32_t *grouping = groupings + uint64_t(grouping_el)*uint64_t(n_dims);
     // Use full precision for intermediate compute, to minimize accumulation errors
     double s_W = 0.0;
-    for (uint32_t row=0; row < (n_dims-1); row++) {   // no columns in last row
-      const TFloat * mat_row = mat + uint64_t(row)*uint64_t(n_dims);
-      uint32_t group_idx = grouping[row];
-      double local_s_W = 0.0;
-      for (uint32_t col=icol+row+1; col < n_dims; col+=col_stride) { // diagonal is always zero
-        if (grouping[col] == group_idx) {
-            TFloat val = mat_row[col];  // mat[row,col];
-            local_s_W += val * val;
+
+    for (uint32_t trow=0; trow < (n_dims-1); trow+=TILE) {   // no columns in last row
+     for (uint32_t tcol=trow+1; tcol < n_dims; tcol+=TILE) { // diagonal is always zero
+      const uint32_t max_row = min(trow+TILE,n_dims-1);
+      const uint32_t max_col = min(tcol+TILE,n_dims);
+
+      __syncthreads();
+      // read grouping[row] in advance into shared memory, using the whole block
+      // helps with read coalesence here, and shared memory is OK to read sparse
+      {
+	 const uint32_t irow = threadIdx.x;
+         uint32_t row=trow+irow;
+	 if (row < max_row) row_grouping[irow] = grouping[row];
+      }
+      __syncthreads();
+
+      for (uint32_t row=trow; row < max_row; row++) {
+        const uint32_t min_col = max(tcol,row+1);
+	const uint32_t irow = row-trow;
+        uint32_t group_idx = row_grouping[irow];
+
+        const TFloat * mat_row = mat + uint64_t(row)*uint64_t(n_dims);
+	uint32_t col= min_col + icol;
+        if ( col < max_col) { // since TILE==col_stride, we get at most one thread picking this up
+            if (grouping[col] == group_idx) {
+                TFloat val = mat_row[col];  // mat[row,col];
+                s_W += val * val * inv_group_sizes[group_idx];
+            }
         }
       }
-      s_W += local_s_W * inv_group_sizes[group_idx];
-    }
+     } // for tcol
+    } // for trow
+
     // now we need to collect data from all the threads
     s_W_arr[icol] = s_W;
     __syncthreads();
@@ -239,7 +277,6 @@ static inline void pmn_f_stat_sW_cuda(
 		const TFloat *inv_group_sizes,
 		TFloat *group_sWs) {
   pmn_f_stat_sW_cuda_one<TFloat><<<n_grouping_dims,128>>>(n_dims,mat,n_grouping_dims,groupings,inv_group_sizes,group_sWs);
-//map(to:groupings[0:groupings_size]) map(from:group_sWs[0:n_grouping_dims])
   cudaDeviceSynchronize();
 }
 #else
