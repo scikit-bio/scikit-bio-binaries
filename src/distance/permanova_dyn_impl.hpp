@@ -220,6 +220,7 @@ __global__ void pmn_f_stat_sW_cuda_one(
       }
       __syncthreads();
 
+      TFloat local_s_W = 0.0;
       for (uint32_t row=trow; row < max_row; row++) {
         const uint32_t min_col = max(tcol,row+1);
 	const uint32_t irow = row-trow;
@@ -230,10 +231,11 @@ __global__ void pmn_f_stat_sW_cuda_one(
         if ( col < max_col) { // since TILE==col_stride, we get at most one thread picking this up
             if (grouping[col] == group_idx) {
                 TFloat val = mat_row[col];  // mat[row,col];
-                s_W += val * val * inv_group_sizes[group_idx];
+                local_s_W += val * val * inv_group_sizes[group_idx];
             }
         }
       }
+      s_W += local_s_W;
      } // for tcol
     } // for trow
 
