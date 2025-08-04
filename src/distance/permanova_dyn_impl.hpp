@@ -45,8 +45,10 @@ static inline int pmn_get_max_parallelism_T() {
   cudaGetDevice(&deviceID);
   cudaGetDeviceProperties(&props, deviceID);
 
-  // We want at least a few gangs per SM
-  return 4*props.multiProcessorCount;
+  // GPUs typically need at least 64 blocks per SM to be fully loaded
+  // We want a few multiples of that to deal with unbalanced load
+  // Most permanovas are multiple of 100, so double that makes a good constant
+  return 200*props.multiProcessorCount;
 
 #elif !(defined(_OPENACC) || defined(OMPGPU))
   // No good reason to do more than max threads
