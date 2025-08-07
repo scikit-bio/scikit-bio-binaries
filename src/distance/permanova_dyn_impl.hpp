@@ -22,27 +22,41 @@
 #include <cstdlib>
 #include <algorithm>
 
-#if defined(CUDA)
+#if defined(SKBB_CUDA)
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#elif !(defined(_OPENACC) || defined(OMPGPU))
+#elif defined(SKBB_HIP)
 
-#include <omp.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
+#include <stdexcept>
 
 #elif defined(_OPENACC)
 
 #include <openacc.h>
 
+#elif !(defined(_OPENACC) || defined(OMPGPU))
+
+#include <omp.h>
+
+#define SKBB_CPU Y
+
 #endif
 
 static inline int pmn_get_max_parallelism_T() {
-#if defined(CUDA)
+#if defined(SKBB_CPU)
+  // No good reason to do more than max threads
+  // (but use 2x to reduce thread spawning overhead)
+  // but we do use 16x blocking, so account for that, too
+  return 2*omp_get_max_threads()*16;
+
+#elif defined(SKBB_CUDA)
   int deviceID;
   cudaDeviceProp props;
 
-  cudaGetDevice(&deviceID);
+  if (cudaGetDevice(&deviceID)!=cudaSuccess) return 4000; // should never get in here, but just in case
   cudaGetDeviceProperties(&props, deviceID);
 
   // GPUs typically need at least 64 blocks per SM to be fully loaded
@@ -50,11 +64,17 @@ static inline int pmn_get_max_parallelism_T() {
   // Most permanovas are multiple of 100, so double that makes a good constant
   return 200*props.multiProcessorCount;
 
-#elif !(defined(_OPENACC) || defined(OMPGPU))
-  // No good reason to do more than max threads
-  // (but use 2x to reduce thread spawning overhead)
-  // but we do use 16x blocking, so account for that, too
-  return 2*omp_get_max_threads()*16;
+#elif defined(SKBB_HIP)
+  int deviceID = 0;
+  hipDeviceProp_t props;
+
+  if (hipGetDevice(&deviceID)!=hipSuccess) return 4000; // should never get in here, but just in case
+  if (hipGetDeviceProperties(&props, deviceID)!=hipSuccess) throw std::runtime_error("hipGetDeviceProperties failed");
+
+  // GPUs typically need at least 64 blocks per SM to be fully loaded
+  // We want a few multiples of that to deal with unbalanced load
+  // Most permanovas are multiple of 100, so double that makes a good constant
+  return 200*props.multiProcessorCount;
 
 #else
   // 1k is enough for consumer-grade GPUs
@@ -122,7 +142,7 @@ static inline void pmn_f_stat_sW_block(
 // inv_group_sizes is an array of size maxel(groupings)
 // Results in group_sWs, and array of size n_grouping_dims
 
-#if !(defined(_OPENACC) || defined(OMPGPU) || defined(CUDA))
+#if defined(SKBB_CPU)
 
 template<class TFloat>
 static inline void pmn_f_stat_sW_cpu(
@@ -187,7 +207,7 @@ static inline void pmn_f_stat_sW_cpu(
  } 
 }
 
-#elif defined(CUDA)
+#elif (defined(SKBB_CUDA) || defined(SKBB_HIP))
 
 template<class TFloat>
 __global__ void pmn_f_stat_sW_cuda_one(
@@ -273,7 +293,7 @@ __global__ void pmn_f_stat_sW_cuda_one(
 }
 
 template<class TFloat>
-static inline void pmn_f_stat_sW_cuda(
+static inline void pmn_f_stat_sW_gpu(
 		const uint32_t n_dims,
 		const TFloat * mat,
 		const uint32_t n_grouping_dims,
@@ -281,7 +301,11 @@ static inline void pmn_f_stat_sW_cuda(
 		const TFloat *inv_group_sizes,
 		TFloat *group_sWs) {
   pmn_f_stat_sW_cuda_one<TFloat><<<n_grouping_dims,128>>>(n_dims,mat,n_grouping_dims,groupings,inv_group_sizes,group_sWs);
+#if defined(SKBB_CUDA)
   cudaDeviceSynchronize();
+#else
+  if (hipDeviceSynchronize()!=hipSuccess) throw std::runtime_error("hipDeviceSynchronize failed");
+#endif
 }
 #else
 
@@ -332,10 +356,8 @@ static inline void pmn_f_stat_sW_T(
 		const uint32_t *groupings,
 		const TFloat *inv_group_sizes,
 		TFloat *group_sWs) {
-#if !(defined(_OPENACC) || defined(OMPGPU) || defined(CUDA))
+#if defined(SKBB_CPU)
   pmn_f_stat_sW_cpu(n_dims, mat, n_grouping_dims, groupings, inv_group_sizes, group_sWs);
-#elif defined(CUDA)
-  pmn_f_stat_sW_cuda(n_dims, mat, n_grouping_dims, groupings, inv_group_sizes, group_sWs);
 #else
   pmn_f_stat_sW_gpu(n_dims, mat, n_grouping_dims, groupings, inv_group_sizes, group_sWs);
 #endif
