@@ -26,6 +26,7 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <stdexcept>
 
 #elif defined(SKBB_HIP)
 
@@ -302,7 +303,7 @@ static inline void pmn_f_stat_sW_gpu(
 		TFloat *group_sWs) {
   pmn_f_stat_sW_cuda_one<TFloat><<<n_grouping_dims,128>>>(n_dims,mat,n_grouping_dims,groupings,inv_group_sizes,group_sWs);
 #if defined(SKBB_CUDA)
-  cudaDeviceSynchronize();
+  if (cudaDeviceSynchronize()!=cudaSuccess) throw std::runtime_error("cudaDeviceSynchronize failed");
 #else
   if (hipDeviceSynchronize()!=hipSuccess) throw std::runtime_error("hipDeviceSynchronize failed");
 #endif

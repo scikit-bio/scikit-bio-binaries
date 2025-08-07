@@ -26,6 +26,7 @@
 #if defined(SKBB_CUDA)
 
 #include <cuda_runtime_api.h>
+#include <stdexcept>
 
 #elif defined(SKBB_HIP)
 
@@ -74,7 +75,7 @@ static inline bool acc_need_alt_T() {
 
 static inline void acc_wait_T() {
 #if defined(SKBB_CUDA)
-  cudaDeviceSynchronize();
+  if (cudaDeviceSynchronize()!=cudaSuccess) throw std::runtime_error("cudaDeviceSynchronize failed");
 #elif defined(SKBB_HIP)
   if (hipDeviceSynchronize()!=hipSuccess) throw std::runtime_error("hipDeviceSynchronize failed");
 #elif defined(OMPGPU)
@@ -90,7 +91,7 @@ static inline void acc_create_buf_T(
 		TNum** buf_device,
 		uint64_t size) {
 #if defined(SKBB_CUDA)
-  cudaMalloc((void**)buf_device, sizeof(TNum) * size);
+  if (cudaMalloc((void**)buf_device, sizeof(TNum) * size)!=cudaSuccess) throw std::runtime_error("cudaMalloc failed");
 #elif defined(SKBB_HIP)
   if (hipMalloc((void**)buf_device, sizeof(TNum) * size)!=hipSuccess) throw std::runtime_error("hipMalloc failed");
 #elif defined(OMPGPU)
@@ -110,8 +111,8 @@ static inline void acc_copyin_buf_T(
 		TNum** buf_device,
 		uint64_t size) {
 #if defined(SKBB_CUDA)
-  cudaMalloc((void**)buf_device, sizeof(TNum) * size);
-  cudaMemcpy(*buf_device, buf_host, sizeof(TNum) * size, cudaMemcpyHostToDevice);
+  if (cudaMalloc((void**)buf_device, sizeof(TNum) * size)!=cudaSuccess) throw std::runtime_error("cudaMalloc failed");
+  if (cudaMemcpy(*buf_device, buf_host, sizeof(TNum) * size, cudaMemcpyHostToDevice)!=cudaSuccess) throw std::runtime_error("cudaMemcpy failed");
 #elif defined(SKBB_HIP)
   if (hipMalloc((void**)buf_device, sizeof(TNum) * size)!=hipSuccess) throw std::runtime_error("hipMalloc failed");
   if (hipMemcpy(*buf_device, buf_host, sizeof(TNum) * size, hipMemcpyHostToDevice)!=hipSuccess) throw std::runtime_error("hipMemcpy failed");
@@ -132,7 +133,7 @@ static inline void acc_update_device_T(
 		TNum *buf_device,
 		uint64_t start, uint64_t end) {
 #if defined(SKBB_CUDA)
-  cudaMemcpy(buf_device+start, buf_host+start, sizeof(TNum) * (end-start), cudaMemcpyHostToDevice);
+  if (cudaMemcpy(buf_device+start, buf_host+start, sizeof(TNum) * (end-start), cudaMemcpyHostToDevice)!=cudaSuccess) throw std::runtime_error("cudaMemcpy failed");
 #elif defined(SKBB_HIP)
   if (hipMemcpy(buf_device+start, buf_host+start, sizeof(TNum) * (end-start), hipMemcpyHostToDevice)!=hipSuccess) throw std::runtime_error("hipMemcpy failed");
 #elif defined(OMPGPU)
@@ -150,7 +151,7 @@ static inline void acc_copyout_buf_T(
 		TNum *buf_device,
 		uint64_t size) {
 #if defined(SKBB_CUDA)
-  cudaMemcpy(buf_host, buf_device, sizeof(TNum) * size, cudaMemcpyDeviceToHost);
+  if (cudaMemcpy(buf_host, buf_device, sizeof(TNum) * size, cudaMemcpyDeviceToHost)!=cudaSuccess) throw std::runtime_error("cudaMemcpy failed");
   cudaFree(buf_device);
 #elif defined(SKBB_HIP)
   if (hipMemcpy(buf_host, buf_device, sizeof(TNum) * size, hipMemcpyDeviceToHost)!=hipSuccess) throw std::runtime_error("hipMemcpy failed");
