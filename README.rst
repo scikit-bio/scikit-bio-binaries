@@ -53,6 +53,12 @@ The CUDA build is not enabled by default. If you are interested in building the 
 
     export NV_CUDA=Y
 
+To build AMD-GPU-enabled code, you will also need the HIP compiler.
+
+The HIP build is not enabled by default. If you are interested in building the GPU-accelerated libraries, set::
+
+    export AMD_HIP=Y
+
 There is also support for OpenMP Offload and OpenACC builds, by setting either ``AMD_CXX`` or ``NV_CXX``, but it is still experimental.
 
 Provided files and their usage

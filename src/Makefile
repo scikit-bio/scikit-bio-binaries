@@ -58,7 +58,7 @@ ifneq ($(SKBB_ENABLE_ACC_NV),)
     # CUDA version
     SKBB_ENABLE_ACC_NV_BINS := 1
     NV_CXX := nvcc
-    NV_CXXFLAGS := -DCUDA
+    NV_CXXFLAGS := -DSKBB_CUDA
     NV_CXXFLAGS += -O3 --use_fast_math -std=c++17 -I. $(OPT) -Xcompiler -fPIC
     NV_CXXFLAGS += -arch=all-major
   else
@@ -75,14 +75,24 @@ ifneq ($(SKBB_ENABLE_ACC_NV),)
   endif
 endif
 
-ifneq ($(AMD_CXX),)
-  ifneq ($(SKBB_ENABLE_ACC_AMD),)
+ifneq ($(SKBB_ENABLE_ACC_AMD),)
+  ifneq ($(AMD_HIP),)
+    # HIP version
+    SKBB_ENABLE_ACC_AMD_BINS := 1
+    AMD_CXX := hipcc
+    AMD_CXXFLAGS := -DSKBB_HIP
+    AMD_CXXFLAGS += -O3 -ffast-math -std=c++17 -I. $(OPT) -fPIC
+    AMD_CXXFLAGS += --offload-arch=gfx1100,gfx1101,gfx1102,gfx1103,gfx1030,gfx1031,gfx90a,gfx942
+    AMD_SO_LDDFLAGS += -shared -fgpu-rdc --hip-link
+  else
+   ifneq ($(AMD_CXX),)
     SKBB_ENABLE_ACC_AMD_BINS := 1
     AMD_CXXFLAGS += -fopenmp -fopenmp-offload-mandatory -DOMPGPU=1
     AMD_CXXFLAGS += -O3 -ffast-math -std=c++17 -I. $(OPT) -fPIC
     AMD_LDFLAGS += -shared -fopenmp
     AMD_CXXFLAGS += --offload-arch=gfx1100,gfx1101,gfx1102,gfx1103,gfx1030,gfx1031,gfx90a,gfx942
     AMD_LDFLAGS += --offload-arch=gfx1100,gfx1101,gfx1102,gfx1103,gfx1030,gfx1031,gfx90a,gfx942
+   endif
   endif
 endif
 
@@ -246,19 +256,29 @@ endif
 ifdef SKBB_ENABLE_ACC_AMD
 SKBB_OBJS += permanova_acc_amd.o
 
-
 permanova_dyn_acc_amd.h: distance/permanova_dyn_impl.hpp
 	./tools/generate_permanova_dyn.py acc_amd api_h > $@
-permanova_dyn_acc_amd.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_amd.h
-	./tools/generate_permanova_dyn.py acc_amd api > $@
 permanova_acc_amd.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_amd.h
 	./tools/generate_permanova_dyn.py acc_amd indirect > $@
 
 permanova_acc_amd.o: permanova_acc_amd.cpp permanova_dyn_acc_amd.h distance/permanova_dyn.hpp util/skbb_dl.cpp
 	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_amd -c $< -o $@
 
+ifneq ($(AMD_HIP),)
+# HIP version
+permanova_dyn_acc_amd.hip: distance/permanova_dyn_impl.hpp permanova_dyn_acc_amd.h
+	./tools/generate_permanova_dyn.py acc_amd api > $@
+permanova_dyn_acc_amd.o: permanova_dyn_acc_amd.hip distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
+	$(AMD_CXX) $(AMD_CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_amd -c $< -o $@
+
+else
+# OpenMP Target version
+permanova_dyn_acc_amd.cpp: distance/permanova_dyn_impl.hpp permanova_dyn_acc_amd.h
+	./tools/generate_permanova_dyn.py acc_amd api > $@
 permanova_dyn_acc_amd.o: permanova_dyn_acc_amd.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
 	$(AMD_CXX) $(AMD_CXXFLAGS) -DSKBB_ACC_NM=skbb_acc_amd -c $< -o $@
+
+endif
 
 endif
 
@@ -317,8 +337,15 @@ ifdef SKBB_ENABLE_ACC_AMD_BINS
 
 SKBB_SHLIBS += libskbb_acc_amd.so
 
+ifneq ($(AMD_HIP),)
+#HIP version
+libskbb_acc_amd.so: skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
+	$(AMD_CXX) $(AMD_SO_LDDFLAGS) -o $@ skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
+else
+#OpenMP Target version
 libskbb_acc_amd.so: skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
 	$(AMD_CXX) $(AMD_LDFLAGS) $(SO_LDDFLAGS) -o $@ skbb_accapi_dyn_acc_amd.o permanova_dyn_acc_amd.o
+endif
 
 endif
 
