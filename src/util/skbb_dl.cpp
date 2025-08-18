@@ -27,7 +27,7 @@ static void dl_load(const char *fncname,
 
    if (dl_handle==NULL) {
        const char* lib_name = dl_get_lib_name();
-       const char* env_cpu_info = getenv("SKBB_CPU_INFO");
+       const char* env_cpu_info = getenv("SKBB_GPU_INFO");
        if ((env_cpu_info!=NULL) && (env_cpu_info[0]=='Y')) {
            printf("INFO (skbio_bins): Using shared library %s\n",lib_name);
        }
@@ -70,7 +70,7 @@ static bool dl_load_check() {
 	  return false;
        }
        // only print out if the library exists
-       const char* env_cpu_info = getenv("SKBB_CPU_INFO");
+       const char* env_cpu_info = getenv("SKBB_GPU_INFO");
        if ((env_cpu_info!=NULL) && (env_cpu_info[0]=='Y')) {
            printf("INFO (skbio_bins): Using shared library %s\n",lib_name);
        }
