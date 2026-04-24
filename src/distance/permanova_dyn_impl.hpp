@@ -56,9 +56,11 @@ static inline int pmn_get_max_parallelism_T() {
 #if defined(_OPENMP)
   return 2*omp_get_max_threads()*16;
 #else
-  // Single-threaded builds (e.g. WASM): one "thread", still keep the 16x
-  // block factor so the tiling loop downstream has enough work.
-  return 16;
+  // Single-threaded builds (e.g. WASM): use the same formula with
+  // max_threads=1, i.e. 2*1*16 = 32. This keeps the RNG-chunking scheme
+  // identical to a native OMP_NUM_THREADS=1 run, so fixed-seed PERMANOVA
+  // results are bit-identical across native (single-thread) and WASM.
+  return 32;
 #endif
 
 #elif defined(SKBB_CUDA)

@@ -107,8 +107,32 @@ test_smoke_wasm.js: libskbb_wasm.a tests/wasm/test_smoke.cpp wasm_test_include_s
 	  tests/wasm/test_smoke.cpp libskbb_wasm.a \
 	  $(WASM_TEST_LDFLAGS) -o $@
 
-wasm_test: test_smoke_wasm.js
+test_permanova_wasm.js: libskbb_wasm.a tests/wasm/test_permanova_wasm.cpp \
+                       tests/wasm/permanova_inputs.hpp \
+                       tests/wasm/expected/permanova_expected.h \
+                       wasm_test_include_stage
+	$(WASM_CXX) $(WASM_CXXFLAGS) -I.wasm-test-include \
+	  tests/wasm/test_permanova_wasm.cpp libskbb_wasm.a \
+	  $(WASM_TEST_LDFLAGS) -o $@
+
+wasm_test: test_smoke_wasm.js test_permanova_wasm.js
+	@echo "--- smoke ---"
 	node test_smoke_wasm.js
+	@echo "--- permanova ---"
+	node test_permanova_wasm.js
+
+# Native helper: regenerates tests/wasm/expected/permanova_expected.h
+# by running skbb::permanova on the fixed inputs and dumping the observed
+# values as a header. Requires the native build (libskbb_cpu.a).
+wasm_regen_permanova_expected: libskbb_cpu.a
+	$(CXX) $(CXXFLAGS) \
+	  tests/wasm/generate_permanova_expected.cpp libskbb_cpu.a \
+	  $(LDFLAGS) -o generate_permanova_expected.exe
+	mkdir -p tests/wasm/expected
+	OMP_NUM_THREADS=1 ./generate_permanova_expected.exe > tests/wasm/expected/permanova_expected.h
+	@echo "regenerated tests/wasm/expected/permanova_expected.h"
+
+.PHONY: wasm_regen_permanova_expected
 
 wasm_clean:
 	rm -f libskbb_wasm.a *.wasm.o *_wasm.js *_wasm.wasm
