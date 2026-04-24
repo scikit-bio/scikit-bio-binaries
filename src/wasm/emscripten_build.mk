@@ -115,11 +115,19 @@ test_permanova_wasm.js: libskbb_wasm.a tests/wasm/test_permanova_wasm.cpp \
 	  tests/wasm/test_permanova_wasm.cpp libskbb_wasm.a \
 	  $(WASM_TEST_LDFLAGS) -o $@
 
-wasm_test: test_smoke_wasm.js test_permanova_wasm.js
+test_center_wasm.js: libskbb_wasm.a tests/wasm/test_center_wasm.cpp \
+                    wasm_test_include_stage
+	$(WASM_CXX) $(WASM_CXXFLAGS) -I.wasm-test-include \
+	  tests/wasm/test_center_wasm.cpp libskbb_wasm.a \
+	  $(WASM_TEST_LDFLAGS) -o $@
+
+wasm_test: test_smoke_wasm.js test_permanova_wasm.js test_center_wasm.js
 	@echo "--- smoke ---"
 	node test_smoke_wasm.js
 	@echo "--- permanova ---"
 	node test_permanova_wasm.js
+	@echo "--- center ---"
+	node test_center_wasm.js
 
 # Native helper: regenerates tests/wasm/expected/permanova_expected.h
 # by running skbb::permanova on the fixed inputs and dumping the observed
