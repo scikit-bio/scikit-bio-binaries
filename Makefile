@@ -13,8 +13,12 @@ wasm_test:
 	scripts/fetch_eigen.sh
 	cd src && $(MAKE) wasm_test
 
+wasm_api_test: wasm
+	cd api_tests/wasm && $(MAKE) wasm_test
+
 wasm_clean:
 	cd src && $(MAKE) wasm_clean
+	cd api_tests/wasm && $(MAKE) wasm_clean
 
 api:
 	cd src && $(MAKE) api
