@@ -9,6 +9,11 @@
 #
 # Expected toolchain (activated emsdk on PATH):
 #   emcc, em++, emar
+#
+# Invocation: this Makefile fragment is included from src/Makefile and
+# must be run with src/ as the working directory. All test source paths
+# (e.g. `tests/wasm/test_*.cpp`) are relative to src/, and `-I.` from
+# WASM_CXXFLAGS resolves `#include "tests/wasm/..."` against src/.
 
 WASM_REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../../)
 WASM_EIGEN_INC := $(WASM_REPO_ROOT)/.wasm-cache/eigen/include
@@ -88,11 +93,6 @@ skbb_extern_ordination.wasm.o: extern/skbb_ordination.cpp extern/ordination.h or
 # the sibling .wasm. NODERAWFS=0 is the default — we don't touch disk.
 WASM_TEST_LDFLAGS := -sEXIT_RUNTIME=1 -sALLOW_MEMORY_GROWTH=1 \
                      -sENVIRONMENT=node -sNODERAWFS=0
-
-# The test .c files in extern/ expect the public header to live under
-# scikit-bio-binaries/, so we pass -Iextern-include with a symlink-free
-# header location. Simplest: -I./extern and a shim include path.
-WASM_TEST_CPPFLAGS := $(WASM_CXXFLAGS) -I$(WASM_REPO_ROOT)/src
 
 # The public headers refer to themselves as "scikit-bio-binaries/util.h".
 # Provide that prefix via a staged include directory.

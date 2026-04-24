@@ -52,11 +52,21 @@ int qr_inplace(uint32_t rows, uint32_t cols, float  *H, uint32_t &qcols);
 
 /*
  * SVD "N, O" variant (matches LAPACKE_dgesvd flags 'N','O'):
- *   - jobu = 'N'  : do not return U
- *   - jobvt = 'O' : overwrite A with V^T
- * T is (rows x cols) on input; on output holds V^T in the leading rows of T.
- * S (size min(rows,cols)) holds the singular values, sorted descending.
- * Returns 0 on success.
+ *   - jobu  = 'N' : do not return U
+ *   - jobvt = 'O' : overwrite T with V^T
+ *
+ * Layout contract:
+ *   T is a column-major (rows x cols) buffer. On output, V^T occupies
+ *   the first k = min(rows,cols) rows of T, i.e. for all (r,c) with
+ *   0 <= r < k and 0 <= c < cols, T[r + c*rows] = V^T[r,c]. The
+ *   trailing rows in [k, rows) are left undefined by LAPACK when
+ *   rows > cols (jobvt='O' only writes the k V^T rows). Consumers MUST
+ *   use stride `rows` (the full buffer leading dimension); reading k
+ *   packed rows as a (k x cols) contiguous submatrix is invalid and
+ *   will observe garbage in the gaps.
+ *
+ *   S (length >= min(rows,cols)) receives the singular values in
+ *   descending order. Returns 0 on success.
  */
 int svd_no(uint32_t rows, uint32_t cols, double *T, double *S);
 int svd_no(uint32_t rows, uint32_t cols, float  *T, float  *S);

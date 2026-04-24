@@ -73,19 +73,23 @@ Run the WASM test suites::
     make wasm_test               # smoke, PERMANOVA, centering, PCoA
     make wasm_api_test           # public C API parity (api_tests/wasm)
 
-Expected tolerances:
+Expected tolerances (native LAPACK vs WASM Eigen, at the test matrices
+currently shipped):
 
-- ``mat_to_centered`` and PCoA (eigenvalues, proportion explained,
-  sample coordinates up to sign) agree with the native LAPACK build at
-  machine epsilon on the current test matrices.
-- PERMANOVA's ``fstat`` is bit-identical native vs WASM at a fixed
-  seed (same arithmetic, same ``std::mt19937``). The ``pvalue`` varies
-  by up to two binomial standard errors because ``std::shuffle``'s
-  internal ``std::uniform_int_distribution`` is implementation-defined
-  across libstdc++ (native) and libc++ (emscripten); this is an
-  unavoidable C++-library portability gap. The WASM build is itself
-  deterministic — the same inputs and seed always produce the same
-  outputs on the same build.
+- ``mat_to_centered``: 1e-6 absolute per element.
+- PCoA / FSVD: 1e-6 absolute for eigenvalues and proportion explained;
+  1e-3 absolute for sample coordinates (sign-adjusted per axis, since
+  eigenvectors are unique only up to sign). In practice the observed
+  drift is at machine epsilon (~1e-15), but the headroom is kept for
+  larger or more ill-conditioned inputs.
+- PERMANOVA: ``fstat`` is bit-identical native vs WASM at a fixed seed
+  (same arithmetic, same ``std::mt19937``, and the shuffle itself is a
+  portable Fisher-Yates in ``src/util/portable_shuffle.hpp`` rather
+  than ``std::shuffle``, so the permutation sequence is also
+  reproducible across toolchains). ``pvalue`` is therefore also
+  expected to be bit-identical at a fixed seed under single-thread
+  native and WASM. The WASM build is internally deterministic: the
+  same inputs and seed always produce the same outputs.
 
 Downstream linking example::
 

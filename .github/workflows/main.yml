@@ -76,7 +76,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: mymindstorm/setup-emsdk@v14
+    # Canonical setup-emsdk action (moved from mymindstorm/ to
+    # emscripten-core/ in v16). Pin major for reproducibility.
+    - uses: emscripten-core/setup-emsdk@v16
       with:
         version: 5.0.3
         actions-cache-folder: emsdk-cache

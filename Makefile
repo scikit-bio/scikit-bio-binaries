@@ -1,5 +1,13 @@
 .PHONY: all api install test_bins test clean clean_install wasm wasm_clean
 
+# The native api/install paths and the wasm path both depend on generated
+# source files under src/ (permanova_cpu.cpp, skbb_accapi_cpu.cpp, produced
+# by python scripts). Each sub-make has its own DAG, so two concurrent
+# top-level targets (e.g. `make -j all wasm`) could fire the generators
+# in parallel and truncate the same output file. Force top-level targets
+# to serialize; sub-makes retain their internal parallelism.
+.NOTPARALLEL:
+
 all:
 	$(MAKE) api
 	$(MAKE) install

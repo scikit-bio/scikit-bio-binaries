@@ -48,8 +48,9 @@
 
 
 #include "util/rand.hpp"
+#include "util/portable_shuffle.hpp"
 
-#include <stdlib.h> 
+#include <stdlib.h>
 
 #include <algorithm>
 
@@ -158,7 +159,12 @@ static inline void permanova_perm_fp_sW_T(const uint32_t n_dims,
          if (p!=0) { // do not permute the first one
            const uint32_t grouping_el = p-tp;
            uint32_t *my_grouping = permutted_groupings + uint64_t(grouping_el)*uint64_t(n_dims);
-           std::shuffle(my_grouping, my_grouping+n_dims, randomGenerators.get_random_generator(grouping_el));
+           // Portable Fisher-Yates: std::shuffle delegates to
+           // std::uniform_int_distribution, whose output is implementation
+           // defined across libstdc++/libc++ and breaks cross-toolchain
+           // reproducibility. See util/portable_shuffle.hpp for rationale.
+           skbb::portable_shuffle(my_grouping, n_dims,
+                                  randomGenerators.get_random_generator(grouping_el));
          }
       }
       // now call the actual permanova

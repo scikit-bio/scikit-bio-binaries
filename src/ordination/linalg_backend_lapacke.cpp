@@ -57,7 +57,11 @@ int qr_inplace(uint32_t rows, uint32_t cols, float *H, uint32_t &qcols) {
 }
 
 int svd_no(uint32_t rows, uint32_t cols, double *T, double *S) {
-    double *superb = (double *) malloc(sizeof(double) * rows);
+    // LAPACKE contract: superb length >= min(rows,cols) - 1. Use
+    // min(rows,cols) so a 1x1 matrix (min==1) still has a non-zero
+    // allocation; LAPACK won't read past min-1 anyway.
+    const uint32_t superb_len = std::min(rows, cols);
+    double *superb = (double *) malloc(sizeof(double) * superb_len);
     int rc = LAPACKE_dgesvd(LAPACK_COL_MAJOR, 'N', 'O', rows, cols,
                             T, rows, S, NULL, rows, NULL, cols, superb);
     free(superb);
@@ -65,7 +69,8 @@ int svd_no(uint32_t rows, uint32_t cols, double *T, double *S) {
 }
 
 int svd_no(uint32_t rows, uint32_t cols, float *T, float *S) {
-    float *superb = (float *) malloc(sizeof(float) * rows);
+    const uint32_t superb_len = std::min(rows, cols);
+    float *superb = (float *) malloc(sizeof(float) * superb_len);
     int rc = LAPACKE_sgesvd(LAPACK_COL_MAJOR, 'N', 'O', rows, cols,
                             T, rows, S, NULL, rows, NULL, cols, superb);
     free(superb);

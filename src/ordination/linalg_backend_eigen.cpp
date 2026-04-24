@@ -64,24 +64,16 @@ template <class T>
 static inline int qr_inplace_T(uint32_t rows, uint32_t cols, T *H, uint32_t &qcols) {
     qcols = std::min(rows, cols);
 
-    // householderQr() wants an Eigen::Matrix, not a Map; copy in then copy Q back.
-    ColMat<T> A(rows, cols);
-    {
-        CMapConst<T> src(H, rows, cols);
-        A = src;
-    }
-
+    // HouseholderQR takes its input by value; we copy H into an owning
+    // matrix, factor, then extract the thin Q (rows x qcols) by applying
+    // householderQ() to an identity of the desired width.
+    ColMat<T> A = CMapConst<T>(H, rows, cols);
     Eigen::HouseholderQR<ColMat<T>> qr(A);
 
-    // Reconstruct the thin Q as an (rows x qcols) matrix. Eigen's
-    // householderQ() object can be multiplied by an identity of the
-    // desired size to extract the thin Q explicitly.
     ColMat<T> Q = ColMat<T>::Identity(rows, qcols);
     Q = qr.householderQ() * Q;
 
-    // Write Q back into the caller's H buffer.
-    CMap<T> dst(H, rows, qcols);
-    dst = Q;
+    CMap<T>(H, rows, qcols) = Q;
     return 0;
 }
 
@@ -94,36 +86,25 @@ int qr_inplace(uint32_t rows, uint32_t cols, float *H, uint32_t &qcols) {
 
 template <class T>
 static inline int svd_no_T(uint32_t rows, uint32_t cols, T *T_mat, T *S) {
-    // Input matrix T is (rows x cols), column-major, in linear buffer.
-    ColMat<T> A(rows, cols);
-    {
-        CMapConst<T> src(T_mat, rows, cols);
-        A = src;
-    }
-
     // Match LAPACKE_gesvd(jobu='N', jobvt='O'): compute V^T, no U.
-    // ComputeThinV is sufficient because we overwrite the first
-    // min(rows,cols) rows of T_mat with V^T.
+    // See linalg_backend.hpp for the output layout contract — we write
+    // V^T into the first k rows of T_mat with stride `rows`; consumers
+    // must read with the same stride.
+    ColMat<T> A = CMapConst<T>(T_mat, rows, cols);
     Eigen::BDCSVD<ColMat<T>> svd(A, Eigen::ComputeThinV);
 
-    // Singular values, sorted descending (Eigen guarantees this).
     const uint32_t k = std::min(rows, cols);
     for (uint32_t i = 0; i < k; ++i) {
         S[i] = svd.singularValues()(i);
     }
 
-    // V^T overwrite: in LAPACKE with jobvt='O' the first min(m,n) rows of A
-    // hold V^T (the rows of V^T are the right singular vectors).
-    //
-    // Eigen's V matrix is (cols x k); transpose into the first k rows of T.
-    ColMat<T> Vt = svd.matrixV().transpose();   // (k x cols)
-
-    // Write Vt into the first k rows of the (rows x cols) T_mat buffer,
-    // leaving the trailing rows untouched (the consumer only reads
-    // the first k rows, matching LAPACK's behaviour).
+    // Eigen's V is (cols x k); its transpose is (k x cols). Write
+    // Vt into rows [0, k) of the (rows x cols) T_mat buffer using
+    // the same stride `rows` the caller expects from LAPACKE.
+    ColMat<T> Vt = svd.matrixV().transpose();
     CMap<T> dst(T_mat, rows, cols);
-    for (uint32_t r = 0; r < k; ++r) {
-        for (uint32_t c = 0; c < cols; ++c) {
+    for (uint32_t c = 0; c < cols; ++c) {
+        for (uint32_t r = 0; r < k; ++r) {
             dst(r, c) = Vt(r, c);
         }
     }
