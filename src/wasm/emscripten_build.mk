@@ -121,17 +121,27 @@ test_center_wasm.js: libskbb_wasm.a tests/wasm/test_center_wasm.cpp \
 	  tests/wasm/test_center_wasm.cpp libskbb_wasm.a \
 	  $(WASM_TEST_LDFLAGS) -o $@
 
-wasm_test: test_smoke_wasm.js test_permanova_wasm.js test_center_wasm.js
+test_pcoa_wasm.js: libskbb_wasm.a tests/wasm/test_pcoa_wasm.cpp \
+                  tests/wasm/pcoa_inputs.hpp \
+                  tests/wasm/expected/pcoa_expected.h \
+                  wasm_test_include_stage
+	$(WASM_CXX) $(WASM_CXXFLAGS) -I.wasm-test-include \
+	  tests/wasm/test_pcoa_wasm.cpp libskbb_wasm.a \
+	  $(WASM_TEST_LDFLAGS) -o $@
+
+wasm_test: test_smoke_wasm.js test_permanova_wasm.js test_center_wasm.js test_pcoa_wasm.js
 	@echo "--- smoke ---"
 	node test_smoke_wasm.js
 	@echo "--- permanova ---"
 	node test_permanova_wasm.js
 	@echo "--- center ---"
 	node test_center_wasm.js
+	@echo "--- pcoa ---"
+	node test_pcoa_wasm.js
 
-# Native helper: regenerates tests/wasm/expected/permanova_expected.h
-# by running skbb::permanova on the fixed inputs and dumping the observed
-# values as a header. Requires the native build (libskbb_cpu.a).
+# Native helpers: regenerate tests/wasm/expected/*.h by running skbb on
+# the fixed inputs and dumping the observed values as C headers.
+# Requires the native build (libskbb_cpu.a + BLAS/LAPACKE for PCoA).
 wasm_regen_permanova_expected: libskbb_cpu.a
 	$(CXX) $(CXXFLAGS) \
 	  tests/wasm/generate_permanova_expected.cpp libskbb_cpu.a \
@@ -140,7 +150,15 @@ wasm_regen_permanova_expected: libskbb_cpu.a
 	OMP_NUM_THREADS=1 ./generate_permanova_expected.exe > tests/wasm/expected/permanova_expected.h
 	@echo "regenerated tests/wasm/expected/permanova_expected.h"
 
-.PHONY: wasm_regen_permanova_expected
+wasm_regen_pcoa_expected: libskbb_cpu.a
+	$(CXX) $(CXXFLAGS) \
+	  tests/wasm/generate_pcoa_expected.cpp libskbb_cpu.a \
+	  $(LDFLAGS) $(BLASLIB) -o generate_pcoa_expected.exe
+	mkdir -p tests/wasm/expected
+	OMP_NUM_THREADS=1 ./generate_pcoa_expected.exe > tests/wasm/expected/pcoa_expected.h
+	@echo "regenerated tests/wasm/expected/pcoa_expected.h"
+
+.PHONY: wasm_regen_permanova_expected wasm_regen_pcoa_expected
 
 wasm_clean:
 	rm -f libskbb_wasm.a *.wasm.o *_wasm.js *_wasm.wasm
