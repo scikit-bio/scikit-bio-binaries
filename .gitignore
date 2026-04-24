@@ -1,1 +1,2 @@
 .wasm-cache/
+src/tools/__pycache__/

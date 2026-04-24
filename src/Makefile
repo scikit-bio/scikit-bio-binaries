@@ -290,7 +290,12 @@ endif
 
 SKBB_OBJS += ord_pcoa.o
 
-ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_coordinate_analysis.hpp util/skbb_dgb_info.hpp
+ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_coordinate_analysis.hpp ordination/linalg_backend.hpp util/skbb_dgb_info.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+SKBB_OBJS += ord_linalg_backend.o
+
+ord_linalg_backend.o: ordination/linalg_backend_lapacke.cpp ordination/linalg_backend.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 ##
