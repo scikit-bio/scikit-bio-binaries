@@ -1,9 +1,20 @@
-.PHONY: all api install test_bins test clean clean_install
+.PHONY: all api install test_bins test clean clean_install wasm wasm_clean
 
 all:
 	$(MAKE) api
 	$(MAKE) install
 	$(MAKE) test_bins
+
+wasm:
+	scripts/fetch_eigen.sh
+	cd src && $(MAKE) wasm
+
+wasm_test:
+	scripts/fetch_eigen.sh
+	cd src && $(MAKE) wasm_test
+
+wasm_clean:
+	cd src && $(MAKE) wasm_clean
 
 api:
 	cd src && $(MAKE) api

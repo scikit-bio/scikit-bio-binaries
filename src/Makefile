@@ -1,9 +1,15 @@
-.PHONY: all api install test_bins test clean clean_install
+.PHONY: all api install test_bins test clean clean_install wasm wasm_test wasm_clean
 
 all:
 	$(MAKE) api
 	$(MAKE) test_bins
 	$(MAKE) install
+
+# WebAssembly build (emsdk required; see scripts/fetch_eigen.sh).
+# Produces libskbb_wasm.a in this directory.
+include wasm/emscripten_build.mk
+
+wasm: libskbb_wasm.a
 
 PLATFORM := $(shell uname -s)
 ARCH := $(shell uname -m)

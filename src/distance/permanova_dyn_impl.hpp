@@ -40,7 +40,9 @@
 
 #elif !(defined(_OPENACC) || defined(OMPGPU))
 
+#if defined(_OPENMP)
 #include <omp.h>
+#endif
 
 #define SKBB_CPU Y
 
@@ -51,7 +53,13 @@ static inline int pmn_get_max_parallelism_T() {
   // No good reason to do more than max threads
   // (but use 2x to reduce thread spawning overhead)
   // but we do use 16x blocking, so account for that, too
+#if defined(_OPENMP)
   return 2*omp_get_max_threads()*16;
+#else
+  // Single-threaded builds (e.g. WASM): one "thread", still keep the 16x
+  // block factor so the tiling loop downstream has enough work.
+  return 16;
+#endif
 
 #elif defined(SKBB_CUDA)
   int deviceID;
