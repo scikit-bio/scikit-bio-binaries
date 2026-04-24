@@ -68,3 +68,33 @@ jobs:
         # and a weird number to potentially catch potential bugs
         export OMP_NUM_THREADS=3
         make test
+
+  build-and-test-wasm:
+    # Emscripten WASM build: produces libskbb_wasm.a (single-threaded,
+    # CPU-only, Eigen-backed) and runs all WASM tests under node. The
+    # existing native matrix above is unaffected — they run in parallel.
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: 5.0.3
+        actions-cache-folder: emsdk-cache
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Cache Eigen headers
+      uses: actions/cache@v4
+      with:
+        path: .wasm-cache/eigen
+        key: eigen-3.4.0
+    - name: Fetch Eigen (cached)
+      run: scripts/fetch_eigen.sh
+    - name: Verify Eigen cache
+      run: scripts/test_eigen_wasm.sh
+    - name: Build libskbb_wasm.a
+      run: make wasm
+    - name: Run WASM unit tests
+      run: make wasm_test
+    - name: Run WASM public-API tests
+      run: make wasm_api_test
