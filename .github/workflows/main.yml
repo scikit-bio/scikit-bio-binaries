@@ -96,14 +96,24 @@ jobs:
         node-version: '20'
     - name: Install native build deps for expected-value generators
       run: |
-        # libopenblas-dev alone covers cblas + LAPACK + LAPACKE since
-        # Ubuntu's OpenBLAS is built with USE_LAPACK=1. We override
-        # BLASLIB to -lopenblas below to bypass the missing libcblas.so
-        # / liblapacke.so individual symlinks (Debian/Ubuntu does not
-        # ship those names with libopenblas-dev — that's ATLAS territory).
+        # Headers vs link symbols, on Ubuntu, are split across packages:
+        #   - libopenblas-dev  provides libopenblas.so (cblas + LAPACK
+        #                      Fortran symbols; USE_LAPACK=1 in the
+        #                      Ubuntu build). It does NOT provide
+        #                      cblas.h at the default include path.
+        #   - libblas-dev      provides cblas.h at
+        #                      /usr/include/x86_64-linux-gnu/cblas.h
+        #                      via Debian alternatives.
+        #   - liblapacke-dev   provides lapacke.h plus liblapacke.so
+        #                      (the LAPACKE C wrappers). The wrappers
+        #                      forward to whichever BLAS implementation
+        #                      `-lopenblas` or alternates is linked.
+        # We override BLASLIB to "-llapacke -lopenblas" on the test
+        # steps below — the default "-llapacke -lcblas" would need
+        # libatlas-base-dev for libcblas.so, which we don't install.
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
-          g++ make libopenblas-dev
+          g++ make libopenblas-dev libblas-dev liblapacke-dev
     - name: Cache Eigen headers
       uses: actions/cache@v4
       with:
@@ -118,10 +128,12 @@ jobs:
     - name: Run WASM unit tests
       # libskbb_cpu.a and the expected-value generators are built as
       # transitive prereqs of tests/wasm/expected/*.h. NOGPU=1 keeps the
-      # native portion CPU-only; BLASLIB="-lopenblas" overrides the
-      # default `-llapacke -lcblas` because Ubuntu's libopenblas-dev
-      # does not ship libcblas.so / liblapacke.so individual link names
-      # — but libopenblas itself exposes both cblas and LAPACKE symbols.
-      run: env NOGPU=1 BLASLIB="-lopenblas" make wasm_test
+      # native portion CPU-only. BLASLIB substitutes the conda-flavoured
+      # default `-llapacke -lcblas` with `-llapacke -lopenblas`:
+      # liblapacke-dev provides the LAPACKE C wrappers, and
+      # libopenblas-dev provides the cblas + LAPACK Fortran symbols
+      # those wrappers call. Ubuntu does not ship a libcblas.so under
+      # that exact name (ATLAS does, but we don't install it).
+      run: env NOGPU=1 BLASLIB="-llapacke -lopenblas" make wasm_test
     - name: Run WASM public-API tests
-      run: env NOGPU=1 BLASLIB="-lopenblas" make wasm_api_test
+      run: env NOGPU=1 BLASLIB="-llapacke -lopenblas" make wasm_api_test

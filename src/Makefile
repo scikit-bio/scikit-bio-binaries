@@ -27,7 +27,11 @@ ifndef NOGPU
    LDFLAGS += -ldl
 endif
 
-BLASLIB=-llapacke -lcblas
+# Conditional assignment so callers can override via env or command line
+# (e.g. BLASLIB=-lopenblas on Ubuntu where libopenblas-dev does not ship
+# the libcblas.so / liblapacke.so individual link names). Without `?=`,
+# this assignment would shadow the env variable inside the Makefile.
+BLASLIB ?= -llapacke -lcblas
 
 ifeq ($(PLATFORM),Darwin)
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/libskbb.so
