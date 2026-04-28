@@ -96,9 +96,14 @@ jobs:
         node-version: '20'
     - name: Install native build deps for expected-value generators
       run: |
+        # libopenblas-dev alone covers cblas + LAPACK + LAPACKE since
+        # Ubuntu's OpenBLAS is built with USE_LAPACK=1. We override
+        # BLASLIB to -lopenblas below to bypass the missing libcblas.so
+        # / liblapacke.so individual symlinks (Debian/Ubuntu does not
+        # ship those names with libopenblas-dev — that's ATLAS territory).
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
-          g++ make libopenblas-dev liblapacke-dev
+          g++ make libopenblas-dev
     - name: Cache Eigen headers
       uses: actions/cache@v4
       with:
@@ -110,14 +115,13 @@ jobs:
       run: scripts/test_eigen_wasm.sh
     - name: Build libskbb_wasm.a
       run: make wasm
-    - name: Build native libskbb_cpu.a (for expected-value generators)
-      run: |
-        # The generators link libskbb_cpu.a + cblas + lapacke. Build only
-        # what they need — no install, no GPU, no shared libs.
-        env NOGPU=1 PREFIX=/tmp/skbb_unused make -C src libskbb_cpu.a
     - name: Run WASM unit tests
-      # Make targets `tests/wasm/expected/*.h` will fire the generators
-      # under OMP_NUM_THREADS=1, then build and run the WASM tests.
-      run: make wasm_test
+      # libskbb_cpu.a and the expected-value generators are built as
+      # transitive prereqs of tests/wasm/expected/*.h. NOGPU=1 keeps the
+      # native portion CPU-only; BLASLIB="-lopenblas" overrides the
+      # default `-llapacke -lcblas` because Ubuntu's libopenblas-dev
+      # does not ship libcblas.so / liblapacke.so individual link names
+      # — but libopenblas itself exposes both cblas and LAPACKE symbols.
+      run: env NOGPU=1 BLASLIB="-lopenblas" make wasm_test
     - name: Run WASM public-API tests
-      run: make wasm_api_test
+      run: env NOGPU=1 BLASLIB="-lopenblas" make wasm_api_test
