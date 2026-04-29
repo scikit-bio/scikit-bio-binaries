@@ -42,6 +42,69 @@ To test that the build succeeded, run::
 
     make test
 
+WebAssembly (WASM) build
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+scikit-bio-binaries can also be compiled to WebAssembly for use in
+browser-targeted or ``duckdb-wasm``-based projects. This build produces
+a static archive, ``libskbb_wasm.a``, that downstream emscripten
+projects can link into a final ``.wasm`` module.
+
+The WASM variant is single-threaded, CPU-only (no OpenMP, no GPU, no
+pthread) and uses `Eigen 3.4.0 <https://eigen.tuxfamily.org/>`_ as the
+linear-algebra backend instead of ``cblas``/``LAPACKE``. Eigen is
+header-only, so no external numerical library needs to be built under
+emscripten. The public ``skbb_*`` C symbol set is identical to the
+native build.
+
+Prerequisites:
+
+- An activated `emsdk <https://emscripten.org/docs/getting_started/downloads.html>`_
+  (emsdk 5.0.3 or newer recommended).
+- ``node`` 18+ available on ``PATH`` (only needed to run the WASM tests).
+
+Build::
+
+    scripts/fetch_eigen.sh       # downloads Eigen 3.4.0 into .wasm-cache/eigen
+    make wasm                    # produces src/libskbb_wasm.a
+
+Run the WASM test suites::
+
+    make wasm_test               # smoke, PERMANOVA, centering, PCoA
+    make wasm_api_test           # public C API parity (api_tests/wasm)
+
+Expected tolerances (native LAPACK vs WASM Eigen, at the test matrices
+currently shipped):
+
+- ``mat_to_centered``: 1e-6 absolute per element.
+- PCoA / FSVD: 1e-6 absolute for eigenvalues and proportion explained;
+  1e-3 absolute for sample coordinates (sign-adjusted per axis, since
+  eigenvectors are unique only up to sign). In practice the observed
+  drift is at machine epsilon (~1e-15), but the headroom is kept for
+  larger or more ill-conditioned inputs.
+- PERMANOVA: ``fstat`` is bit-identical native vs WASM at a fixed seed
+  (same arithmetic, same ``std::mt19937``, and the shuffle itself is a
+  portable Fisher-Yates in ``src/util/portable_shuffle.hpp`` rather
+  than ``std::shuffle``, so the permutation sequence is also
+  reproducible across toolchains). ``pvalue`` is therefore also
+  expected to be bit-identical at a fixed seed under single-thread
+  native and WASM. The WASM build is internally deterministic: the
+  same inputs and seed always produce the same outputs.
+
+Downstream linking example::
+
+    emcc my_code.c src/libskbb_wasm.a -sEXIT_RUNTIME=1 \\
+        -I src/extern -o my_code.js
+
+Limitations / out of scope:
+
+- No GPU offload (NVIDIA/AMD).
+- No multithreading. A future pthread-enabled variant would require
+  rebuilding with ``-pthread`` and serving the hosting page with the
+  appropriate COOP/COEP headers.
+- No ``SKBB_ENABLE_CPU_X86_LEVELS`` dispatch (wasm32 has its own
+  SIMD story; not wired up yet).
+
 GPU support
 ~~~~~~~~~~~
 

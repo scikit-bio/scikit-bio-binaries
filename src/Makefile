@@ -1,4 +1,4 @@
-.PHONY: all api install test_bins test clean clean_install
+.PHONY: all api install test_bins test clean clean_install wasm wasm_test wasm_clean
 
 all:
 	$(MAKE) api
@@ -27,7 +27,11 @@ ifndef NOGPU
    LDFLAGS += -ldl
 endif
 
-BLASLIB=-llapacke -lcblas
+# Conditional assignment so callers can override via env or command line
+# (e.g. BLASLIB=-lopenblas on Ubuntu where libopenblas-dev does not ship
+# the libcblas.so / liblapacke.so individual link names). Without `?=`,
+# this assignment would shadow the env variable inside the Makefile.
+BLASLIB ?= -llapacke -lcblas
 
 ifeq ($(PLATFORM),Darwin)
         SO_LDDFLAGS = -L$(PREFIX)/lib -fopenmp -dynamiclib -install_name @rpath/libskbb.so
@@ -96,6 +100,12 @@ ifneq ($(SKBB_ENABLE_ACC_AMD),)
   endif
 endif
 
+# WebAssembly build (emsdk required; see scripts/fetch_eigen.sh).
+# Provides WASM_CXX / WASM_CXXFLAGS used by the skbb_cpu_tu macro below,
+# plus the libskbb_wasm.a archive rule and WASM-only objects/tests.
+include wasm/emscripten_build.mk
+
+wasm: libskbb_wasm.a
 
 clean:
 	# all source files are in subdirectories
@@ -103,17 +113,39 @@ clean:
 	rm -f *.o *.so *.a *.exe
 
 ##
+# Shared per-translation-unit recipe.
+#
+# A handful of CPU-only sources are compiled into BOTH the native libskbb
+# (via $(CXX) $(CXXFLAGS)) and the WASM libskbb_wasm (via $(WASM_CXX)
+# $(WASM_CXXFLAGS)). The two builds previously had parallel per-file rules
+# in src/Makefile and src/wasm/emscripten_build.mk; this macro emits both
+# from a single point of definition so adding a new TU only needs one line.
+#
+# Native-only rules (x86 dispatch, GPU dispatch) and WASM-only rules
+# (Eigen linalg backend) remain explicit further down — the macro is for
+# the symmetric case only.
+#
+# Args:
+#   $(1) — object stem (e.g. `util_rand` => `util_rand.o`, `util_rand.wasm.o`)
+#   $(2) — source path
+#   $(3) — header dependencies (space separated)
+#   $(4) — extra compile flags applied to BOTH builds (e.g. -DSKBB_ACC_NM=skbb_cpu)
+
+define skbb_cpu_tu
+$(1).o: $(2) $(3)
+	$$(CXX) $$(CXXFLAGS) $(4) -c $$< -o $$@
+$(1).wasm.o: $(2) $(3)
+	$$(WASM_CXX) $$(WASM_CXXFLAGS) $(4) -c $$< -o $$@
+endef
+
+##
 # Utility/helper modules
 
 SKBB_OBJS := util_rand.o
-
-util_rand.o: util/rand.cpp util/rand.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(eval $(call skbb_cpu_tu,util_rand,util/rand.cpp,util/rand.hpp,))
 
 SKBB_OBJS += skbb_detect_acc.o
-
-skbb_detect_acc.o: util/skbb_detect_acc.cpp util/skbb_detect_acc.hpp util/skbb_accapi.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(eval $(call skbb_cpu_tu,skbb_detect_acc,util/skbb_detect_acc.cpp,util/skbb_detect_acc.hpp util/skbb_accapi.hpp,))
 
 ##
 # skbb_accapi dynamic code wrappers generation
@@ -128,8 +160,7 @@ SKBB_OBJS += skbb_accapi_cpu.o
 skbb_accapi_cpu.cpp: util/skbb_accapi.hpp
 	./tools/generate_skbb_accapi.py cpu direct > $@
 
-skbb_accapi_cpu.o: skbb_accapi_cpu.cpp util/skbb_accapi.hpp util/skbb_accapi_impl.hpp
-	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_cpu -c $< -o $@
+$(eval $(call skbb_cpu_tu,skbb_accapi_cpu,skbb_accapi_cpu.cpp,util/skbb_accapi.hpp util/skbb_accapi_impl.hpp,-DSKBB_ACC_NM=skbb_cpu))
 
 #
 # True accelerated variants will use a separate compiler
@@ -176,10 +207,7 @@ endif
 # Distance methods
 
 SKBB_OBJS += dist_permanova.o
-
-dist_permanova.o: distance/permanova.cpp distance/permanova.hpp distance/permanova_dyn.hpp util/skbb_accapi.hpp util/skbb_detect_acc.hpp util/rand.hpp util/skbb_dgb_info.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
+$(eval $(call skbb_cpu_tu,dist_permanova,distance/permanova.cpp,distance/permanova.hpp distance/permanova_dyn.hpp util/skbb_accapi.hpp util/skbb_detect_acc.hpp util/rand.hpp util/portable_shuffle.hpp util/skbb_dgb_info.hpp,))
 
 #
 # permanova dynamic code wrappers generation
@@ -191,8 +219,7 @@ SKBB_OBJS += permanova_cpu.o
 permanova_cpu.cpp: distance/permanova_dyn.hpp
 	./tools/generate_permanova_dyn.py cpu direct > $@
 
-permanova_cpu.o: permanova_cpu.cpp distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp
-	$(CXX) $(CXXFLAGS) -DSKBB_ACC_NM=skbb_cpu -c $< -o $@
+$(eval $(call skbb_cpu_tu,permanova_cpu,permanova_cpu.cpp,distance/permanova_dyn.hpp distance/permanova_dyn_impl.hpp,-DSKBB_ACC_NM=skbb_cpu))
 
 ifeq ($(SKBB_ENABLE_CPU_X86V3),1)
 SKBB_OBJS += permanova_cpu_x86_v3.o
@@ -289,8 +316,17 @@ endif
 # Ordination methods
 
 SKBB_OBJS += ord_pcoa.o
+$(eval $(call skbb_cpu_tu,ord_pcoa,ordination/principal_coordinate_analysis.cpp,ordination/principal_coordinate_analysis.hpp ordination/linalg_backend.hpp util/skbb_dgb_info.hpp,))
 
-ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_coordinate_analysis.hpp util/skbb_dgb_info.hpp
+# Linalg backend split: native uses cblas+LAPACKE, WASM uses Eigen.
+# These are different source files, so the symmetric skbb_cpu_tu macro
+# doesn't apply — keep two explicit rules. The WASM rule lives in
+# wasm/emscripten_build.mk to keep the Eigen include path local to that
+# file.
+
+SKBB_OBJS += ord_linalg_backend.o
+
+ord_linalg_backend.o: ordination/linalg_backend_lapacke.cpp ordination/linalg_backend.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 ##
@@ -298,14 +334,9 @@ ord_pcoa.o: ordination/principal_coordinate_analysis.cpp ordination/principal_co
 SHBB_EXTERN_OBJS := skbb_extern_distance.o skbb_extern_ordination.o skbb_extern_util.o
 SHBB_EXTERN_HS := distance.h ordination.h util.h
 
-skbb_extern_util.o: extern/skbb_util.cpp extern/util.h util/rand.hpp util/skbb_detect_acc.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-skbb_extern_distance.o: extern/skbb_distance.cpp extern/distance.h distance/permanova.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-skbb_extern_ordination.o: extern/skbb_ordination.cpp extern/ordination.h ordination/principal_coordinate_analysis.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(eval $(call skbb_cpu_tu,skbb_extern_util,extern/skbb_util.cpp,extern/util.h util/rand.hpp util/skbb_detect_acc.hpp,))
+$(eval $(call skbb_cpu_tu,skbb_extern_distance,extern/skbb_distance.cpp,extern/distance.h distance/permanova.hpp,))
+$(eval $(call skbb_cpu_tu,skbb_extern_ordination,extern/skbb_ordination.cpp,extern/ordination.h ordination/principal_coordinate_analysis.hpp,))
 
 ##
 

@@ -40,7 +40,9 @@
 
 #elif !(defined(_OPENACC) || defined(OMPGPU))
 
+#if defined(_OPENMP)
 #include <omp.h>
+#endif
 
 #define SKBB_CPU Y
 
@@ -51,7 +53,22 @@ static inline int pmn_get_max_parallelism_T() {
   // No good reason to do more than max threads
   // (but use 2x to reduce thread spawning overhead)
   // but we do use 16x blocking, so account for that, too
+#if defined(_OPENMP)
   return 2*omp_get_max_threads()*16;
+#elif defined(SKBB_WASM)
+  // WASM build: single-threaded, no OpenMP. Use 2*1*16 = 32 so the
+  // RNG-chunking scheme matches what a native OMP_NUM_THREADS=1 run
+  // would produce, keeping PERMANOVA results reproducible across the
+  // two toolchains at a fixed seed.
+  return 32;
+#else
+  // Reject other combinations at compile time rather than silently
+  // choosing an arbitrary chunk size. A non-OpenMP non-WASM native CPU
+  // build was never supported (pre-WASM code required <omp.h>), and
+  // changing its PERMANOVA chunk size would silently change seeded
+  // pvalues. If you hit this, set -fopenmp or define SKBB_WASM.
+#error "pmn_get_max_parallelism_T: no chunk size for non-OpenMP non-WASM CPU builds"
+#endif
 
 #elif defined(SKBB_CUDA)
   int deviceID;

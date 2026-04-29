@@ -15,13 +15,13 @@
 #include "principal_coordinate_analysis.hpp"
 #include "util/skbb_dgb_info.hpp"
 #include "util/rand.hpp"
+#include "linalg_backend.hpp"
 
-#include <stdlib.h> 
+#include <stdlib.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <algorithm>
-
-#include <cblas.h>
-#include <lapacke.h>
 
 //
 // ======================= PCoA ========================
@@ -195,18 +195,8 @@ void skbb::mat_to_centered(const uint32_t n_dims, const double mat[], float  cen
 // mat must be   cols x rows
 // other must be cols x rows (ColOrder... rows elements together)
 template<class TReal>
-static inline void mat_dot_T(const TReal *mat, const TReal *other, const uint32_t rows, const uint32_t cols, TReal *out);
-
-template<>
-inline void mat_dot_T<double>(const double *mat, const double *other, const uint32_t rows, const uint32_t cols, double *out)
-{
-  cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rows , cols, rows, 1.0, mat, rows, other, rows, 0.0, out, rows);
-}
-
-template<>
-inline void mat_dot_T<float>(const float *mat, const float *other, const uint32_t rows, const uint32_t cols, float *out)
-{
-  cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rows , cols, rows, 1.0, mat, rows, other, rows, 0.0, out, rows);
+static inline void mat_dot_T(const TReal *mat, const TReal *other, const uint32_t rows, const uint32_t cols, TReal *out) {
+  skbb::linalg::gemm_nn(rows, cols, rows, mat, other, out);
 }
 
 // Expects FORTRAN-style ColOrder
@@ -249,38 +239,12 @@ static inline void centered_randomize_T(const TReal centered[], const uint32_t n
   free(tmp);
 }
 
-// templated LAPACKE wrapper
-
 // Compute QR
 // H is in,overwritten by Q on out
 // H is (r x c), Q is (r x qc), with rc<=c
 template<class TReal>
-static inline int qr_i_T(const uint32_t rows, const uint32_t cols, TReal *H, uint32_t &qcols);
-
-template<>
-inline int qr_i_T<double>(const uint32_t rows, const uint32_t cols, double *H, uint32_t &qcols) {
-  qcols= std::min(rows,cols);
-  double *tau= new double[qcols];
-  int rc = LAPACKE_dgeqrf(LAPACK_COL_MAJOR, rows, cols, H, rows, tau);
-  if (rc==0) {
-    qcols= std::min(rows,cols);
-    rc = LAPACKE_dorgqr(LAPACK_COL_MAJOR, rows, qcols, qcols, H, rows, tau);
-  }
-  delete[] tau;
-  return rc;
-}
-
-template<>
-inline int qr_i_T<float>(const uint32_t rows, const uint32_t cols, float *H, uint32_t &qcols) {
-  qcols= std::min(rows,cols);
-  float *tau= new float[qcols];
-  int rc = LAPACKE_sgeqrf(LAPACK_COL_MAJOR, rows, cols, H, rows, tau);
-  if (rc==0) {
-    qcols= std::min(rows,cols);
-    rc = LAPACKE_sorgqr(LAPACK_COL_MAJOR, rows, qcols, qcols, H, rows, tau);
-  }
-  delete[] tau;
-  return rc;
+static inline int qr_i_T(const uint32_t rows, const uint32_t cols, TReal *H, uint32_t &qcols) {
+  return skbb::linalg::qr_inplace(rows, cols, H, qcols);
 }
 
 namespace skbb {
@@ -326,47 +290,31 @@ class QR {
 
 template<>
 inline void skbb::QR<double>::qdot_r_sq(const double *mat, double *res) {
-  cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rows , cols, rows, 1.0, mat, rows, Q, rows, 0.0, res, rows);
+  skbb::linalg::gemm_nn(rows, cols, rows, mat, Q, res);
 }
 
 template<>
 inline void skbb::QR<float>::qdot_r_sq(const float *mat, float *res) {
-  cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rows , cols, rows, 1.0, mat, rows, Q, rows, 0.0, res, rows);
+  skbb::linalg::gemm_nn(rows, cols, rows, mat, Q, res);
 }
 
 template<>
 inline void skbb::QR<double>::qdot_l_sq(const double *mat, double *res) {
-  cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rows , cols, cols, 1.0, Q, rows, mat, cols, 0.0, res, rows);
+  skbb::linalg::gemm_nn(rows, cols, cols, Q, mat, res);
 }
 
 template<>
 void skbb::QR<float>::qdot_l_sq(const float *mat, float *res) {
-  cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans, rows , cols, cols, 1.0, Q, rows, mat, cols, 0.0, res, rows);
+  skbb::linalg::gemm_nn(rows, cols, cols, Q, mat, res);
 }
 
 // compute svd, and return S and V
 // T = input
 // S output
-// T is Vt on output
+// T is Vt on output (first min(rows,cols) rows hold V^T)
 template<class TReal>
-inline int svd_it_T(const uint32_t rows, const uint32_t cols, TReal *T, TReal *S);
-
-template<>
-inline int svd_it_T<double>(const uint32_t rows, const uint32_t cols, double *T, double *S) {
-  double *superb = (double *) malloc(sizeof(double)*rows);
-  int res =LAPACKE_dgesvd(LAPACK_COL_MAJOR, 'N', 'O', rows, cols, T, rows, S, NULL, rows, NULL, cols, superb);
-  free(superb);
-
-  return res;
-}
-
-template<>
-inline int svd_it_T<float>(const uint32_t rows, const uint32_t cols, float *T, float *S) {
-  float *superb = (float *) malloc(sizeof(float)*rows);
-  int res =LAPACKE_sgesvd(LAPACK_COL_MAJOR, 'N', 'O', rows, cols, T, rows, S, NULL, rows, NULL, cols, superb);
-  free(superb);
-
-  return res;
+inline int svd_it_T(const uint32_t rows, const uint32_t cols, TReal *T, TReal *S) {
+  return skbb::linalg::svd_no(rows, cols, T, S);
 }
 
 // square matrix transpose, with org not alingned

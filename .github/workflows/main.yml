@@ -13,7 +13,10 @@ jobs:
   build-and-test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-13, macos-latest, ubuntu-24.04-arm]
+        # macos-13 dropped: GitHub-hosted macos-13 runners were retired
+        # in early 2026; jobs queue for 24h and then time out. macos-latest
+        # is the current supported macOS runner and stays in the matrix.
+        os: [ubuntu-latest, macos-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
@@ -68,3 +71,69 @@ jobs:
         # and a weird number to potentially catch potential bugs
         export OMP_NUM_THREADS=3
         make test
+
+  build-and-test-wasm:
+    # Emscripten WASM build: produces libskbb_wasm.a (single-threaded,
+    # CPU-only, Eigen-backed) and runs all WASM tests under node. Runs
+    # in parallel with the native matrix above.
+    #
+    # The WASM tests compare against expected values produced by the
+    # NATIVE build (see src/tests/wasm/generate_*_expected.cpp). The
+    # generated headers are not committed, so this job needs both the
+    # emsdk toolchain and a native gcc + cblas + lapacke to build the
+    # generators.
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    # Canonical setup-emsdk action (moved from mymindstorm/ to
+    # emscripten-core/ in v16). Pin major for reproducibility.
+    - uses: emscripten-core/setup-emsdk@v16
+      with:
+        version: 5.0.3
+        actions-cache-folder: emsdk-cache
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install native build deps for expected-value generators
+      run: |
+        # Headers vs link symbols, on Ubuntu, are split across packages:
+        #   - libopenblas-dev  provides libopenblas.so (cblas + LAPACK
+        #                      Fortran symbols; USE_LAPACK=1 in the
+        #                      Ubuntu build). It does NOT provide
+        #                      cblas.h at the default include path.
+        #   - libblas-dev      provides cblas.h at
+        #                      /usr/include/x86_64-linux-gnu/cblas.h
+        #                      via Debian alternatives.
+        #   - liblapacke-dev   provides lapacke.h plus liblapacke.so
+        #                      (the LAPACKE C wrappers). The wrappers
+        #                      forward to whichever BLAS implementation
+        #                      `-lopenblas` or alternates is linked.
+        # We override BLASLIB to "-llapacke -lopenblas" on the test
+        # steps below — the default "-llapacke -lcblas" would need
+        # libatlas-base-dev for libcblas.so, which we don't install.
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          g++ make libopenblas-dev libblas-dev liblapacke-dev
+    - name: Cache Eigen headers
+      uses: actions/cache@v4
+      with:
+        path: .wasm-cache/eigen
+        key: eigen-3.4.0
+    - name: Fetch Eigen (cached)
+      run: scripts/fetch_eigen.sh
+    - name: Verify Eigen cache
+      run: scripts/test_eigen_wasm.sh
+    - name: Build libskbb_wasm.a
+      run: make wasm
+    - name: Run WASM unit tests
+      # libskbb_cpu.a and the expected-value generators are built as
+      # transitive prereqs of tests/wasm/expected/*.h. NOGPU=1 keeps the
+      # native portion CPU-only. BLASLIB substitutes the conda-flavoured
+      # default `-llapacke -lcblas` with `-llapacke -lopenblas`:
+      # liblapacke-dev provides the LAPACKE C wrappers, and
+      # libopenblas-dev provides the cblas + LAPACK Fortran symbols
+      # those wrappers call. Ubuntu does not ship a libcblas.so under
+      # that exact name (ATLAS does, but we don't install it).
+      run: env NOGPU=1 BLASLIB="-llapacke -lopenblas" make wasm_test
+    - name: Run WASM public-API tests
+      run: env NOGPU=1 BLASLIB="-llapacke -lopenblas" make wasm_api_test
