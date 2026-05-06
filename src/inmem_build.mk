@@ -64,7 +64,11 @@ libskbb_inmem.a: $(INMEM_OBJS)
 inmem_static: libskbb_inmem.a
 
 # Install (archive + public headers under a stable prefix layout).
+# Guards against the empty-PREFIX footgun: the top-level Makefile falls
+# back to CONDA_PREFIX, but if both are unset `mkdir -p /lib` would
+# silently target the root filesystem.
 install_inmem: libskbb_inmem.a
+	@test -n "$(PREFIX)" || { echo "ERROR: PREFIX is unset (and CONDA_PREFIX is unset). Pass PREFIX=/path or activate a conda env."; exit 1; }
 	mkdir -p "${PREFIX}/lib" "${PREFIX}/include/scikit-bio-binaries"
 	rm -f "${PREFIX}/lib/libskbb_inmem.a"; cp libskbb_inmem.a "${PREFIX}/lib/"
 	for f in $(SHBB_EXTERN_HS); do rm -f "${PREFIX}/include/scikit-bio-binaries/$${f}"; cp "extern/$${f}" "${PREFIX}/include/scikit-bio-binaries/"; done
