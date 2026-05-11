@@ -105,6 +105,11 @@ endif
 # plus the libskbb_wasm.a archive rule and WASM-only objects/tests.
 include wasm/emscripten_build.mk
 
+# Native in-memory static-archive build. Eigen backend, OpenMP enabled,
+# no LAPACKE/cblas/GPU. Provides INMEM_CXX / INMEM_CXXFLAGS used by the
+# skbb_cpu_tu macro below, plus the libskbb_inmem.a archive rule.
+include inmem_build.mk
+
 wasm: libskbb_wasm.a
 
 clean:
@@ -136,6 +141,8 @@ $(1).o: $(2) $(3)
 	$$(CXX) $$(CXXFLAGS) $(4) -c $$< -o $$@
 $(1).wasm.o: $(2) $(3)
 	$$(WASM_CXX) $$(WASM_CXXFLAGS) $(4) -c $$< -o $$@
+$(1).inmem.o: $(2) $(3)
+	$$(INMEM_CXX) $$(INMEM_CXXFLAGS) $(4) -c $$< -o $$@
 endef
 
 ##
