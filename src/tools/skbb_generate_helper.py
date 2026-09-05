@@ -234,7 +234,7 @@ def print_body(method,lines,nmspace):
             line = lines[i]
             i+=1
         
-        for ft in ftypes:
+        for ft in sorted(ftypes):
             print_func_args(method,ftype,nmspace,fname,ft,fargs)
             print('');
 
