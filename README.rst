@@ -11,7 +11,7 @@
 Installation
 ------------
 
-You can install the latest release of scikit-bio-binaries using ``conda`` (`<https://www.anaconda.com/docs/getting-started/miniconda/main>`_)::
+You can install the latest release of scikit-bio-binaries using ``conda`` (`<https://github.com/conda-forge/miniforge>`_)::
 
     conda install -c conda-forge scikit-bio-binaries
 
@@ -25,7 +25,7 @@ Local build instructions
 The package can be build from source on your local machine.
 We recommend using the conda-provided compilers and libraries, but system-installed ones should work as well.
 
-If you decide to create a dedicated build environment in ``conda`` (`<https://www.anaconda.com/docs/getting-started/miniconda/main>`_)::
+If you decide to create a dedicated build environment in ``conda`` (`<https://github.com/conda-forge/miniforge>`_)::
 
     cplatform=`conda info |awk '/platform/{print $3}'`
     if [[ "$(uname -s)" == "Linux" ]];
