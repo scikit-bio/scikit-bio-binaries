@@ -11,6 +11,8 @@
 #define SKBB_DBG_INFO_HPP
 
 #include <chrono>
+#include <cstdlib>
+#include <string>
 
 // To be used once per function
 #define SETUP_TDBG(method) const char *tdbg_method=method; \
