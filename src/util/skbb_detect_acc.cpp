@@ -27,6 +27,7 @@
 #endif
 
 #include <stdlib.h> 
+#include <cstdlib>
 #include <string> 
 #include <string.h>
 
