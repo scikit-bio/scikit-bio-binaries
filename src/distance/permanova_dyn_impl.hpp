@@ -186,11 +186,13 @@ static inline void pmn_f_stat_sW_cpu(
     } else {
       uint32_t gblock2=gblock;
       // Note: if we ever change NBLOCK, we need to update this logic, too
+      // Each sub-block starts at permutation gblock2, so both the groupings
+      // and the outputs must be offset by (gblock2 - gblock).
       if ((gblock2+(8-1))<n_grouping_dims) {
         // can process multiple permutations per pass
         const uint32_t grouping_el = gblock2;
         pmn_f_stat_sW_block<TFloat,8>(n_dims,mat,
-		    grouping_arr,
+		    grouping_arr + (gblock2 - gblock),
 		    inv_group_sizes,
 		    group_sWs+grouping_el);
         gblock2+=8;
@@ -199,7 +201,7 @@ static inline void pmn_f_stat_sW_cpu(
         // can process multiple permutations per pass
         const uint32_t grouping_el = gblock2;
         pmn_f_stat_sW_block<TFloat,4>(n_dims,mat,
-		    grouping_arr,
+		    grouping_arr + (gblock2 - gblock),
 		    inv_group_sizes,
 		    group_sWs+grouping_el);
         gblock2+=4;
@@ -208,7 +210,7 @@ static inline void pmn_f_stat_sW_cpu(
         // can process multiple permutations per pass
         const uint32_t grouping_el = gblock2;
         pmn_f_stat_sW_block<TFloat,2>(n_dims,mat,
-		    grouping_arr,
+		    grouping_arr + (gblock2 - gblock),
 		    inv_group_sizes,
 		    group_sWs+grouping_el);
         gblock2+=2;
@@ -217,7 +219,7 @@ static inline void pmn_f_stat_sW_cpu(
         // can process multiple permutations per pass
         const uint32_t grouping_el = gblock2;
         pmn_f_stat_sW_block<TFloat,1>(n_dims,mat,
-		    grouping_arr,
+		    grouping_arr + (gblock2 - gblock),
 		    inv_group_sizes,
 		    group_sWs+grouping_el);
       }

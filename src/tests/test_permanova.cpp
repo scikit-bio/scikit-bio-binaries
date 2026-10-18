@@ -9,6 +9,9 @@
  */
 
 #include "distance/permanova.hpp"
+#define SKBB_ACC_NM skbb_cpu
+#include "distance/permanova_dyn.hpp"
+#undef SKBB_ACC_NM
 #include "util/skbb_detect_acc.hpp"
 #include <unistd.h>
 #include "tests/test_helper.hpp"
@@ -203,6 +206,50 @@ void test_permanova_unequal() {
     SUITE_END();
 }
 
+// The CPU kernel processes permutations in blocks of 16 and splits a
+// trailing partial block into 8+4+2+1 sub-blocks. Each sub-block must read
+// the groupings of its own permutations (issue #17).
+template<class TFloat>
+void test_permanova_partial_block_T(const char *name) {
+    SUITE_START(name);
+
+    // 2x2 distance matrix: the single pair contributes d^2 = 1 to s_W when
+    // both samples are in the same group, nothing otherwise.
+    const uint32_t n_dims = 2;
+    const TFloat mat[4] = {0.0, 1.0,
+                           1.0, 0.0};
+    const TFloat inv_group_sizes[2] = {1.0, 1.0};
+
+    // 16 + 8 + 4 + 2 + 1 = 31 permutations: one full block and every
+    // sub-block size of the partial block. Only the permutations of the
+    // 8-wide sub-block (16..23) put both samples in the same group, so a
+    // sub-block that reads the groupings of the start of the partial block
+    // instead of its own gets s_W = 1 where 0 is expected.
+    const uint32_t n_grouping_dims = 31;
+    uint32_t groupings[2 * n_grouping_dims];
+    TFloat want[n_grouping_dims];
+    for (uint32_t p = 0; p < n_grouping_dims; ++p) {
+        const bool same_group = (p >= 16) && (p < 24);
+        groupings[2 * p + 0] = 0;
+        groupings[2 * p + 1] = same_group ? 0 : 1;
+        want[p] = same_group ? 1.0 : 0.0;
+    }
+
+    TFloat got[n_grouping_dims];
+    skbb_cpu::pmn_f_stat_sW<TFloat>(n_dims, mat, n_grouping_dims,
+                                    groupings, inv_group_sizes, got);
+    for (uint32_t p = 0; p < n_grouping_dims; ++p) {
+        ASSERT(got[p] == want[p]);
+    }
+
+    SUITE_END();
+}
+
+void test_permanova_partial_block() {
+    test_permanova_partial_block_T<double>("test permanova partial block fp64");
+    test_permanova_partial_block_T<float>("test permanova partial block fp32");
+}
+
 int main(int argc, char** argv) {
     test_permanova_ties();
     test_permanova_noties();
@@ -237,6 +284,7 @@ int main(int argc, char** argv) {
     test_permanova_ties();
     test_permanova_noties();
     test_permanova_unequal();
+    test_permanova_partial_block();
 
     printf("\n");
     printf(" %i / %i suites failed\n", suites_failed, suites_run);
